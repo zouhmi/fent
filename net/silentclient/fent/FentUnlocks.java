@@ -34,6 +34,22 @@ public final class FentUnlocks {
       return on("coins.off");
    }
 
+   // One line for the startup log: the group switches plus any type that is off.
+   public static String summary() {
+      StringBuilder text = new StringBuilder("cosmetics=" + on("cosmetics"));
+      for (CosmeticType type : CosmeticType.values()) {
+         String name = type.name().toLowerCase(Locale.ROOT);
+         if (!on("cosmetics." + name)) {
+            text.append(' ').append(name).append("=off");
+         }
+      }
+      text.append(" emotes=").append(on("emotes"));
+      text.append(" themes=").append(on("themes"));
+      text.append(" premium=").append(on("premium"));
+      text.append(" coins.off=").append(on("coins.off"));
+      return text.toString();
+   }
+
    // Master switch plus the per type switch, so capes, wings, pets and auras can differ.
    public static boolean type(CosmeticType type) {
       if (type == null) {

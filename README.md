@@ -42,14 +42,21 @@ powershell -File build.ps1
 powershell -File build.ps1 -Install
 ```
 
-`-Install` copies the new jar into the launcher folder and deletes older builds.
+`-Install` copies the new jar into the launcher mods folder, and into
+`.minecraft\mods\1.21.11` when your setup keeps a copy there, deleting older builds
+first. `-Wait` keeps retrying while the game is open, so it finishes after you close it:
+
+```
+powershell -File build.ps1 -Install -Wait
+```
 
 ## Notes
 
 - Client side only, other players still see your real cosmetics
 - Other players still see the real nametag and bandana, they are local to your client
 - Coins stay on the server, the Keep Coins Off row stops the client reporting them
-- Toggles live in `config.json`, the local nametag and bandana live in `silentclient/fent.properties`
+- Toggles live in `config.json` with the picks, the nametag and bandana live in `silentclient/fent.properties`
+- The log gets one line at start with the Fent version and the toggle states
 
 ## Credits
 

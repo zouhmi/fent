@@ -6,6 +6,7 @@
   "mixinPriority": 2000,
   "client": [
     "FentCoinsMixin",
+    "FentLogMixin",
     "FentCosmeticTypeMixin",
     "FentEmotesMixin",
     "FentPremiumServiceMixin",
