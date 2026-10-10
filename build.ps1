@@ -9,11 +9,14 @@
 #                 some setups also run the game from .minecraft\mods\<version>, that mirror
 #                 gets the same treatment when a fent jar already lives there
 # -SkipMixinCheck skip the mixin target check
+# -Wait           with -Install, retry the swap while the game is running, so it lands
+#                 when the game closes instead of failing on a jar the game has open
 param(
     [string]$GameDir = "$env:APPDATA\silentclient-launcher\game",
     [string]$Jdk = "",
     [switch]$Install,
-    [switch]$SkipMixinCheck
+    [switch]$SkipMixinCheck,
+    [switch]$Wait
 )
 
 $ErrorActionPreference = "Stop"
@@ -183,11 +186,29 @@ if ($Install) {
         $installed[$target] = $file
         foreach ($stale in @(Get-ChildItem -LiteralPath $target -Filter "fent-*.jar" -File | Where-Object { $_.FullName -ne $file })) {
             "removing stale $($stale.Name) from $target"
-            Remove-Item -LiteralPath $stale.FullName -Force
+            while ($true) {
+                try {
+                    Remove-Item -LiteralPath $stale.FullName -Force -ErrorAction Stop
+                    break
+                } catch {
+                    if (-not $Wait) { throw }
+                    "game is holding $($stale.Name), waiting for it to close ..."
+                    Start-Sleep -Seconds 5
+                }
+            }
         }
     }
     foreach ($target in ($targets | Select-Object -Unique)) {
-        Copy-Item -LiteralPath $jar -Destination $installed[$target] -Force
+        while ($true) {
+            try {
+                Copy-Item -LiteralPath $jar -Destination $installed[$target] -Force -ErrorAction Stop
+                break
+            } catch {
+                if (-not $Wait) { throw }
+                "cannot write $($installed[$target]) yet, waiting ..."
+                Start-Sleep -Seconds 5
+            }
+        }
         "installed $($installed[$target])"
     }
 }
