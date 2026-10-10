@@ -8,6 +8,7 @@ server side, only your own client is told that you own everything.
 ## Features
 
 - Cosmetics: every cape, wing, hat, bandana, shield, icon, pet and aura is unlocked
+- One toggle per cosmetic type, so you can leave pets or auras alone if you want
 - Emotes: the whole emote catalog is usable, including the wheel
 - Themes: custom theme and its colour options
 - Premium: the client reports the top tier, so premium UI and options open up
@@ -16,7 +17,8 @@ server side, only your own client is told that you own everything.
 ## Usage
 
 Open the modules menu with Right Shift, then go to Settings and pick Unlocker.
-Every unlock has its own toggle there, and they are saved with your config.
+Every unlock has its own toggle there, the four groups plus one per cosmetic type,
+and they are saved with your config.
 
 ## Install
 

@@ -35,6 +35,14 @@ public abstract class FentSettingsMixin {
 
       List<p.b> rows = new ArrayList<p.b>();
       rows.add(fent$toggle("cosmetics", "Unlock Cosmetics"));
+      rows.add(fent$toggle("cosmetics.cape", "Unlock Capes"));
+      rows.add(fent$toggle("cosmetics.wings", "Unlock Wings"));
+      rows.add(fent$toggle("cosmetics.hat", "Unlock Hats"));
+      rows.add(fent$toggle("cosmetics.bandana", "Unlock Bandanas"));
+      rows.add(fent$toggle("cosmetics.shield", "Unlock Shields"));
+      rows.add(fent$toggle("cosmetics.icon", "Unlock Icons"));
+      rows.add(fent$toggle("cosmetics.pet", "Unlock Pets"));
+      rows.add(fent$toggle("cosmetics.aura", "Unlock Auras"));
       rows.add(fent$toggle("emotes", "Unlock Emotes"));
       rows.add(fent$toggle("themes", "Unlock Themes"));
       rows.add(fent$toggle("premium", "Unlock Premium"));

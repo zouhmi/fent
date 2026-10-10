@@ -40,7 +40,7 @@ public abstract class FentCosmeticTypeMixin {
       cancellable = true
    )
    private void fent$unlockAll(Cosmetic cosmetic, CallbackInfoReturnable<Boolean> cir) {
-      if (cosmetic != null && FentUnlocks.cosmetics()) {
+      if (cosmetic != null && FentUnlocks.type(cosmetic.getType())) {
          cir.setReturnValue(Boolean.TRUE);
       }
    }
@@ -52,7 +52,7 @@ public abstract class FentCosmeticTypeMixin {
       cancellable = true
    )
    private void fent$equipLocally(CosmeticType type, String id, CallbackInfo ci) {
-      if (type == null || this.a(type) || !FentUnlocks.cosmetics()) {
+      if (type == null || this.a(type) || !FentUnlocks.type(type)) {
          // Client-owned types apply through am.e, leave that path alone.
          return;
       }
@@ -88,7 +88,7 @@ public abstract class FentCosmeticTypeMixin {
          return;
       }
       for (CosmeticType type : CosmeticType.values()) {
-         if (this.a(type)) {
+         if (this.a(type) || !FentUnlocks.type(type)) {
             continue;
          }
          String saved = r.d(fent$key(type));
