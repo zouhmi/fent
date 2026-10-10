@@ -1,0 +1,14 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "package": "net.silentclient.fent.mixin",
+  "compatibilityLevel": "JAVA_21",
+  "mixinPriority": 2000,
+  "client": [
+    "FentCosmeticTypeMixin",
+    "FentEmotesMixin",
+    "FentPremiumMixin",
+    "FentSettingsMixin",
+    "FentThemesMixin"
+  ]
+}

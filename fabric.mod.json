@@ -1,0 +1,30 @@
+{
+  "schemaVersion": 1,
+  "id": "zouhmifent",
+  "version": "1.2.0",
+  "name": "Fent",
+  "description": "Unlocks SilentClient cosmetics, emotes, themes and Premium locally. Toggles in Modules - Settings - Unlocker. Credit: zouhmi.com",
+  "authors": [
+    "zouhmi.com"
+  ],
+  "contact": {
+    "homepage": "https://zouhmi.com",
+    "sources": "https://zouhmi.com"
+  },
+  "license": "Unlicense",
+  "environment": "client",
+  "icon": "assets/fent/icon.png",
+  "entrypoints": {
+    "client": [
+      "net.silentclient.fent.FentMod"
+    ]
+  },
+  "mixins": [
+    "mixins.fent.json"
+  ],
+  "depends": {
+    "fabricloader": ">=0.19.1",
+    "minecraft": "1.21.11",
+    "silentclient12111": "*"
+  }
+}
