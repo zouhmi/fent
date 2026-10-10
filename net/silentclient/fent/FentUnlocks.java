@@ -39,6 +39,11 @@ public final class FentUnlocks {
       return on("aero.glass");
    }
 
+   // On means the same material reaches the in-game HUD widgets.
+   public static boolean aeroHud() {
+      return on("aero.hud");
+   }
+
    // On means a fetched track's lyrics are kept on disk and read back next time.
    public static boolean lyricsCache() {
       return on("lyrics.cache");
@@ -58,6 +63,7 @@ public final class FentUnlocks {
       text.append(" premium=").append(on("premium"));
       text.append(" coins.off=").append(on("coins.off"));
       text.append(" aero.glass=").append(on("aero.glass"));
+      text.append(" aero.hud=").append(on("aero.hud"));
       text.append(" lyrics.cache=").append(on("lyrics.cache"));
       return text.toString();
    }

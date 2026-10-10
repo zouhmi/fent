@@ -38,6 +38,9 @@ public final class FentAero {
    private static Field previewCache;
    private static long glassCheckedAt;
    private static boolean glass;
+   private static boolean hudGlass;
+   private static int accentRgb = FALLBACK_ACCENT;
+   private static boolean lightBase;
 
    // Called from the theme system after its own themes are built and whenever it rebuilds the
    // custom theme, which is the point where the Base and Accent colours are applied.
@@ -52,6 +55,10 @@ public final class FentAero {
          int base = rgb(baseHex, FALLBACK_BASE);
          int accent = rgb(accentHex, FALLBACK_ACCENT);
          boolean light = luminance(base) >= 0.55f;
+         // The material is drawn with the theme's own accent, so the glass in game and in the menus
+         // carries the colour you picked on the Themes page.
+         accentRgb = accent;
+         lightBase = light;
          Object template = themesClass.getMethod("a", String.class).invoke(null, light ? LIGHT_TEMPLATE : DARK_TEMPLATE);
          if (template == null) {
             template = themesClass.getMethod("a", String.class).invoke(null, DARK_TEMPLATE);
@@ -93,12 +100,35 @@ public final class FentAero {
    // Aero's Liquid Glass pass over the menu panels, with its own switch. Asked once per panel, so
    // both the theme and the switch are held for a moment; a change still lands on the next frame.
    public static boolean glass() {
+      refreshSwitches();
+      return glass;
+   }
+
+   // The same pass over the in-game HUD widgets. Its own switch, so a machine that minds the extra
+   // draws can keep the menus glassed and the HUD flat.
+   public static boolean hudGlass() {
+      refreshSwitches();
+      return hudGlass;
+   }
+
+   // The theme's accent, for the rim light on glass surfaces.
+   public static int accent() {
+      return accentRgb;
+   }
+
+   // A light base gets the light material: a softer shadow and a darker edge.
+   public static boolean light() {
+      return lightBase;
+   }
+
+   private static void refreshSwitches() {
       long now = System.currentTimeMillis();
       if (now - glassCheckedAt >= ACTIVE_TTL_MS) {
          glassCheckedAt = now;
-         glass = active() && FentUnlocks.aeroGlass();
+         boolean on = active();
+         glass = on && FentUnlocks.aeroGlass();
+         hudGlass = on && FentUnlocks.aeroHud();
       }
-      return glass;
    }
 
    private static boolean resolve() throws Exception {

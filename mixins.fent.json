@@ -8,6 +8,8 @@
     "FentAeroMixin",
     "FentCoinsMixin",
     "FentGlassMixin",
+    "FentHudMixin",
+    "FentIslandMixin",
     "FentLogMixin",
     "FentCosmeticTypeMixin",
     "FentEmotesMixin",
