@@ -7,7 +7,6 @@
   "client": [
     "FentCosmeticTypeMixin",
     "FentEmotesMixin",
-    "FentPremiumMixin",
     "FentPremiumServiceMixin",
     "FentSettingsMixin",
     "FentThemesMixin"

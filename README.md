@@ -11,7 +11,7 @@ server side, only your own client is told that you own everything.
 - One toggle per cosmetic type, so you can leave pets or auras alone if you want
 - Emotes: the whole emote catalog is usable, including the wheel
 - Themes: custom theme and its colour options
-- Premium: the client reports the top tier, so premium UI and options open up
+- Premium: the service itself reports the top tier, so every premium check agrees
 - Nametag message and bandana colour save locally, so the premium editors work
 - Selections are saved, so your picks come back after a restart
 
@@ -47,6 +47,7 @@ powershell -File build.ps1 -Install
 
 - Client side only, other players still see your real cosmetics
 - Other players still see the real nametag and bandana, they are local to your client
+- Coins are server checked, SilentClient decides whether an unlocked account earns them
 - Toggles live in `config.json`, the local nametag and bandana live in `silentclient/fent.properties`
 
 ## Credits
