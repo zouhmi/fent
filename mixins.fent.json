@@ -5,6 +5,7 @@
   "compatibilityLevel": "JAVA_21",
   "mixinPriority": 2000,
   "client": [
+    "FentCoinsMixin",
     "FentCosmeticTypeMixin",
     "FentEmotesMixin",
     "FentPremiumServiceMixin",

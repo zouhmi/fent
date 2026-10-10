@@ -46,6 +46,7 @@ public abstract class FentSettingsMixin {
       rows.add(fent$toggle("emotes", "Unlock Emotes"));
       rows.add(fent$toggle("themes", "Unlock Themes"));
       rows.add(fent$toggle("premium", "Unlock Premium"));
+      rows.add(fent$toggle("coins.off", "Keep Coins Off"));
       b.put("unlocker", rows);
    }
 

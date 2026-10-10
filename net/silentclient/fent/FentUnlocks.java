@@ -29,6 +29,11 @@ public final class FentUnlocks {
       return on("premium");
    }
 
+   // On means the active minute reports stay off.
+   public static boolean coinsOff() {
+      return on("coins.off");
+   }
+
    // Master switch plus the per type switch, so capes, wings, pets and auras can differ.
    public static boolean type(CosmeticType type) {
       if (type == null) {
