@@ -5,12 +5,16 @@
   "compatibilityLevel": "JAVA_21",
   "mixinPriority": 2000,
   "client": [
+    "FentAeroMixin",
     "FentCoinsMixin",
+    "FentGlassMixin",
     "FentLogMixin",
     "FentCosmeticTypeMixin",
     "FentEmotesMixin",
+    "FentLyricsMixin",
     "FentPremiumServiceMixin",
     "FentSettingsMixin",
-    "FentThemesMixin"
+    "FentThemesMixin",
+    "FentWidgetMixin"
   ]
 }

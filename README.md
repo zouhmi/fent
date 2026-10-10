@@ -15,12 +15,21 @@ server side, only your own client is told that you own everything.
 - Nametag message and bandana colour save locally, so the premium editors work
 - Keep Coins Off stops the premium active minute reports, on by default
 - Selections are saved, so your picks come back after a restart
+- Aero: a Liquid Glass theme built from the Custom Theme Base and Accent colours, and a
+  glass pass over the menu windows, dialogs and cards while it is the active theme
+- Dynamic Widget: Date, Day, Biome and Players slots beside the shipped ones, the Version
+  slot the widget could already draw, and a Lyrics Offset slider for synced lyrics
+- Lyrics are kept on disk, so a track heard before comes back with its words at once
 
 ## Usage
 
 Open the modules menu with Right Shift, then go to Settings and pick Unlocker.
 Every unlock has its own toggle there, the groups, one per cosmetic type, plus
-Keep Coins Off, and they are saved with your config.
+Aero Glass UI, Cache Lyrics and Keep Coins Off, and they are saved with your config.
+
+Settings, then Themes lists Aero with the rest of the themes. Its colours are the
+Custom Theme Base and Custom Theme Accent rows on that same page, under Settings, so
+picking different colours there repaints every menu, and the glass pass follows.
 
 ## Install
 
@@ -56,6 +65,7 @@ powershell -File build.ps1 -Install -Wait
 - Other players still see the real nametag and bandana, they are local to your client
 - Coins stay on the server, the Keep Coins Off row stops the client reporting them
 - Toggles live in `config.json` with the picks, the nametag and bandana live in `silentclient/fent.properties`
+- Cached lyrics live in `silentclient/fent-lyrics`, one file per track, 300 at most
 - The log gets one line at start with the Fent version and the toggle states
 
 ## Credits

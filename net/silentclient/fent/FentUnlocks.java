@@ -34,6 +34,16 @@ public final class FentUnlocks {
       return on("coins.off");
    }
 
+   // On means the Aero theme's Liquid Glass pass runs over the menu panels.
+   public static boolean aeroGlass() {
+      return on("aero.glass");
+   }
+
+   // On means a fetched track's lyrics are kept on disk and read back next time.
+   public static boolean lyricsCache() {
+      return on("lyrics.cache");
+   }
+
    // One line for the startup log: the group switches plus any type that is off.
    public static String summary() {
       StringBuilder text = new StringBuilder("cosmetics=" + on("cosmetics"));
@@ -47,6 +57,8 @@ public final class FentUnlocks {
       text.append(" themes=").append(on("themes"));
       text.append(" premium=").append(on("premium"));
       text.append(" coins.off=").append(on("coins.off"));
+      text.append(" aero.glass=").append(on("aero.glass"));
+      text.append(" lyrics.cache=").append(on("lyrics.cache"));
       return text.toString();
    }
 
