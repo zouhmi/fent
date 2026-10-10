@@ -6,6 +6,8 @@
 # -Jdk <path>     jdk to use, default the first jdk 21 found
 # -Install        copy the jar into the launcher's fabric-mods folder and drop older builds
 #                 (two fent jars in there would abort the launch with a duplicate mod id)
+#                 some setups also run the game from .minecraft\mods\<version>, that mirror
+#                 gets the same treatment when a fent jar already lives there
 # -SkipMixinCheck skip the mixin target check
 param(
     [string]$GameDir = "$env:APPDATA\silentclient-launcher\game",
@@ -69,13 +71,14 @@ function Find-Jar {
 $jdk = Resolve-Jdk -Preferred $Jdk
 $javac = Join-Path $jdk "bin\javac.exe"
 $jartool = Join-Path $jdk "bin\jar.exe"
-$modsDir = Join-Path $GameDir "silentclient\fabric-mods\1.21.11"
+$mcVersion = "1.21.11"
+$modsDir = Join-Path $GameDir "silentclient\fabric-mods\$mcVersion"
 $lib = Join-Path $GameDir "fabric\libraries"
 
 $silentclient = Find-Jar -Directory $modsDir -Pattern "client-runtime-*.jar"
 $mixinJar = Find-Jar -Directory $lib -Pattern "sponge-mixin-*.jar"
 $loaderJar = Find-Jar -Directory $lib -Pattern "fabric-loader-*.jar"
-$gameJar = Join-Path $GameDir "fabric\1.21.11-client.jar"
+$gameJar = Join-Path $GameDir "fabric\$mcVersion-client.jar"
 if (-not (Test-Path -LiteralPath $gameJar)) { throw "minecraft client jar not found at $gameJar" }
 "compiling against $silentclient"
 
@@ -166,13 +169,27 @@ if (-not $SkipMixinCheck) {
 }
 
 if ($Install) {
-    $installed = Join-Path $modsDir (Split-Path -Leaf $jar)
-    foreach ($stale in @(Get-ChildItem -LiteralPath $modsDir -Filter "fent-*.jar" -File | Where-Object { $_.FullName -ne $installed })) {
-        "removing stale $($stale.Name)"
-        Remove-Item -LiteralPath $stale.FullName -Force
+    $targets = New-Object System.Collections.Generic.List[string]
+    $targets.Add($modsDir)
+    $mirror = Join-Path $env:APPDATA ".minecraft\mods\$mcVersion"
+    if ((Test-Path -LiteralPath $mirror) -and (Get-ChildItem -LiteralPath $mirror -Filter "fent-*.jar" -File -ErrorAction SilentlyContinue)) {
+        $targets.Add($mirror)
     }
-    Copy-Item -LiteralPath $jar -Destination $installed -Force
-    "installed $installed"
+
+    # Drop older builds in every target first, so one locked folder aborts before anything is copied.
+    $installed = @{}
+    foreach ($target in ($targets | Select-Object -Unique)) {
+        $file = Join-Path $target (Split-Path -Leaf $jar)
+        $installed[$target] = $file
+        foreach ($stale in @(Get-ChildItem -LiteralPath $target -Filter "fent-*.jar" -File | Where-Object { $_.FullName -ne $file })) {
+            "removing stale $($stale.Name) from $target"
+            Remove-Item -LiteralPath $stale.FullName -Force
+        }
+    }
+    foreach ($target in ($targets | Select-Object -Unique)) {
+        Copy-Item -LiteralPath $jar -Destination $installed[$target] -Force
+        "installed $($installed[$target])"
+    }
 }
 
 "built $jar (mod id = $id, version = $version)"
