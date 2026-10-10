@@ -12,6 +12,7 @@ server side, only your own client is told that you own everything.
 - Emotes: the whole emote catalog is usable, including the wheel
 - Themes: custom theme and its colour options
 - Premium: the client reports the top tier, so premium UI and options open up
+- Nametag message and bandana colour save locally, so the premium editors work
 - Selections are saved, so your picks come back after a restart
 
 ## Usage
@@ -45,8 +46,8 @@ powershell -File build.ps1 -Install
 ## Notes
 
 - Client side only, other players still see your real cosmetics
-- Actions that need the server, like saving a nametag, stay server side
-- Picks live in `config.json` under the `setting.fent.*` keys
+- Other players still see the real nametag and bandana, they are local to your client
+- Toggles live in `config.json`, the local nametag and bandana live in `silentclient/fent.properties`
 
 ## Credits
 
