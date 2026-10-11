@@ -44,28 +44,25 @@ public final class FentUnlocks {
       return on("aero.hud");
    }
 
+   // On means the Dynamic Widget island samples the world behind it and bends it, so the glass shows
+   // what is under the widget instead of only lighting its edge.
+   public static boolean aeroRefraction() {
+      return on("aero.refraction");
+   }
+
    // On means a fetched track's lyrics are kept on disk and read back next time.
    public static boolean lyricsCache() {
       return on("lyrics.cache");
    }
 
-   // One line for the startup log: the group switches plus any type that is off.
-   public static String summary() {
-      StringBuilder text = new StringBuilder("cosmetics=" + on("cosmetics"));
-      for (CosmeticType type : CosmeticType.values()) {
-         String name = type.name().toLowerCase(Locale.ROOT);
-         if (!on("cosmetics." + name)) {
-            text.append(' ').append(name).append("=off");
-         }
-      }
-      text.append(" emotes=").append(on("emotes"));
-      text.append(" themes=").append(on("themes"));
-      text.append(" premium=").append(on("premium"));
-      text.append(" coins.off=").append(on("coins.off"));
-      text.append(" aero.glass=").append(on("aero.glass"));
-      text.append(" aero.hud=").append(on("aero.hud"));
-      text.append(" lyrics.cache=").append(on("lyrics.cache"));
-      return text.toString();
+   // On means a settings row keeps no plate, so its contents sit straight on the menu backdrop.
+   public static boolean transparentRows() {
+      return on("rows.transparent");
+   }
+
+   // On means a colour setting's swatch shows the colour but no longer opens the colour editor.
+   public static boolean hideColorPicker() {
+      return on("colorpicker.off");
    }
 
    // Master switch plus the per type switch, so capes, wings, pets and auras can differ.

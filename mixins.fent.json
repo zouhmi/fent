@@ -6,16 +6,20 @@
   "mixinPriority": 2000,
   "client": [
     "FentAeroMixin",
+    "FentAvatarMixin",
     "FentCoinsMixin",
+    "FentColorPickerMixin",
     "FentGlassMixin",
     "FentHudMixin",
     "FentIslandMixin",
-    "FentLogMixin",
+    "FentKeysMixin",
     "FentCosmeticTypeMixin",
     "FentEmotesMixin",
     "FentLyricsMixin",
     "FentPremiumServiceMixin",
+    "FentRowsMixin",
     "FentSettingsMixin",
+    "FentStrokesMixin",
     "FentThemesMixin",
     "FentWidgetMixin"
   ]

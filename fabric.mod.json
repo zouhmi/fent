@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
   "id": "zouhmifent",
-  "version": "1.5.1",
+  "version": "1.7.0",
   "name": "Fent",
-  "description": "Unlocks SilentClient cosmetics, emotes, themes and Premium locally, nametag and bandana included, with a toggle per type. Adds the Aero Liquid Glass theme, over the menus and the in-game HUD widgets, extra Dynamic Widget slots and a lyrics offset. Toggles in Modules - Settings - Unlocker. Credit: zouhmi.com",
+  "description": "Unlocks SilentClient cosmetics, emotes, themes and Premium locally, nametag and bandana included, with a toggle per type. Adds the Aero Liquid Glass theme - a base to accent gradient on every menu surface, translucent panes, real framebuffer refraction behind HUD widgets, and the same material on the modules that paint themselves - plus extra Dynamic Widget slots and a lyrics offset. Toggles in Modules - Settings - Unlocker. Credit: zouhmi.com",
   "authors": [
     "zouhmi.com"
   ],

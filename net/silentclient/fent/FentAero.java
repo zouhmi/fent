@@ -39,7 +39,9 @@ public final class FentAero {
    private static long glassCheckedAt;
    private static boolean glass;
    private static boolean hudGlass;
+   private static boolean refraction;
    private static int accentRgb = FALLBACK_ACCENT;
+   private static int baseRgb = FALLBACK_BASE;
    private static boolean lightBase;
 
    // Called from the theme system after its own themes are built and whenever it rebuilds the
@@ -54,10 +56,12 @@ public final class FentAero {
          }
          int base = rgb(baseHex, FALLBACK_BASE);
          int accent = rgb(accentHex, FALLBACK_ACCENT);
-         boolean light = luminance(base) >= 0.55f;
+         boolean light = FentMaterial.luminance(base) >= 0.55f;
          // The material is drawn with the theme's own accent, so the glass in game and in the menus
-         // carries the colour you picked on the Themes page.
+         // carries the colour you picked on the Themes page, and with its base, which is what the
+         // gradient on every surface is built from.
          accentRgb = accent;
+         baseRgb = base;
          lightBase = light;
          Object template = themesClass.getMethod("a", String.class).invoke(null, light ? LIGHT_TEMPLATE : DARK_TEMPLATE);
          if (template == null) {
@@ -111,9 +115,21 @@ public final class FentAero {
       return hudGlass;
    }
 
+   // The real refraction behind the Dynamic Widget island: it needs the HUD glass around it for the
+   // edge, and its own switch because it pays for a framebuffer readback.
+   public static boolean refraction() {
+      refreshSwitches();
+      return refraction;
+   }
+
    // The theme's accent, for the rim light on glass surfaces.
    public static int accent() {
       return accentRgb;
+   }
+
+   // The theme's base colour: the gradient every surface is built from runs from this to the accent.
+   public static int base() {
+      return baseRgb;
    }
 
    // A light base gets the light material: a softer shadow and a darker edge.
@@ -128,12 +144,12 @@ public final class FentAero {
          boolean on = active();
          glass = on && FentUnlocks.aeroGlass();
          hudGlass = on && FentUnlocks.aeroHud();
+         refraction = hudGlass && FentUnlocks.aeroRefraction();
       }
    }
 
    private static boolean resolve() throws Exception {
-      themesClass = Class.forName(THEMES_CLASS);
-      themeClass = Class.forName(THEME_CLASS);
+      themesClass = Class.forName(THEMES_CLASS);      themeClass = Class.forName(THEME_CLASS);
       themeConstructor = themeClass.getDeclaredConstructor(String.class, String.class, Map.class, int[].class);
       themeConstructor.setAccessible(true);
       themeList = themesClass.getDeclaredField("j");
@@ -167,56 +183,60 @@ public final class FentAero {
    // translucency never costs legibility. Dark bases get white washes, light bases black ones.
    private static void material(Map<String, Integer> palette, int base, int accent, boolean light) {
       int wash = light ? 0x000000 : 0xFFFFFF;
-      put(palette, "surface", argb(light ? 0xE0 : 0xD2, light ? base : lighten(base, 0.04f)));
-      put(palette, "surfaceRaised", argb(light ? 0xCC : 0xBE, light ? darken(base, 0.03f) : lighten(base, 0.10f)));
-      put(palette, "backdrop", argb(light ? 0x59 : 0x73, 0x000000));
-      put(palette, "inputBg", argb(light ? 0x38 : 0x59, light ? 0xFFFFFF : 0x05060A));
-      put(palette, "card", argb(light ? 0x0E : 0x1A, wash));
-      put(palette, "cardHover", argb(light ? 0x17 : 0x26, wash));
-      put(palette, "cardActive", argb(light ? 0x20 : 0x30, wash));
-      put(palette, "cardOutline", argb(light ? 0x1A : 0x24, wash));
-      put(palette, "cardOutlineStrong", argb(light ? 0x33 : 0x42, wash));
-      put(palette, "chip", argb(light ? 0x0C : 0x14, wash));
-      put(palette, "chipHover", argb(light ? 0x18 : 0x20, wash));
-      put(palette, "chipActive", argb(light ? 0x22 : 0x2B, wash));
-      put(palette, "control", argb(light ? 0x12 : 0x1C, wash));
-      put(palette, "controlHover", argb(light ? 0x1F : 0x29, wash));
-      put(palette, "controlLift", argb(light ? 0x0C : 0x16, wash));
-      put(palette, "controlActive", argb(light ? 0x29 : 0x33, wash));
-      put(palette, "controlOutline", argb(light ? 0x24 : 0x2B, wash));
-      put(palette, "controlOutlineHover", argb(light ? 0x3D : 0x47, wash));
-      put(palette, "outline", argb(light ? 0x1F : 0x22, wash));
-      put(palette, "scrollTrack", argb(0x0F, wash));
-      put(palette, "scrollThumb", argb(light ? 0x29 : 0x33, wash));
-      put(palette, "scrollThumbHover", argb(light ? 0x4A : 0x59, wash));
-      put(palette, "scrollThumbActive", argb(light ? 0x66 : 0x73, wash));
-      put(palette, "toggleOff", argb(light ? 0x29 : 0x2E, wash));
-      put(palette, "textPrimary", argb(0xF2, light ? 0x0B0B12 : 0xFFFFFF));
-      put(palette, "textOnBackdrop", argb(0xFA, 0xFFFFFF));
-      put(palette, "textBody", argb(0xE2, light ? 0x14141C : 0xFFFFFF));
-      put(palette, "textSecondary", argb(light ? 0xB0 : 0xB8, light ? 0x1C1C26 : 0xFFFFFF));
-      put(palette, "textMuted", argb(light ? 0x8A : 0x8F, light ? 0x24242E : 0xFFFFFF));
-      put(palette, "textFaint", argb(light ? 0x66 : 0x5E, light ? 0x2C2C36 : 0xFFFFFF));
-      put(palette, "accent", argb(0xFF, accent));
-      put(palette, "accentHover", argb(0xFF, lighten(accent, 0.14f)));
-      put(palette, "textOnAccent", argb(0xFF, luminance(accent) > 0.62f ? 0x0B0B12 : 0xFFFFFF));
-      put(palette, "accentOutline", argb(0x66, accent));
-      put(palette, "dangerSoft", argb(light ? 0x24 : 0x2B, 0xFF453A));
-      put(palette, "dangerHover", argb(light ? 0x33 : 0x3D, 0xFF453A));
-      put(palette, "dangerText", argb(0xFF, light ? 0xC42A20 : 0xFF8080));
-      put(palette, "controlDanger", argb(light ? 0x2B : 0x33, 0xFF453A));
-      put(palette, "controlDangerHover", argb(light ? 0x3D : 0x4A, 0xFF453A));
-      put(palette, "controlDangerText", argb(0xFF, light ? 0xD63A2E : 0xFFA0A0));
+      // The two surfaces are what a window and a field are made of, and they are the ones that were
+      // hiding the menu's blurred backdrop: nearly opaque before, well under half now. Everything a
+      // card, a chip or a control is drawn with keeps its own alpha, because those are read at small
+      // sizes and their body is what holds the text.
+      put(palette, "surface", FentMaterial.argb(light ? 0xB4 : 0xA6, light ? base : FentMaterial.lighten(base, 0.06f)));
+      put(palette, "surfaceRaised", FentMaterial.argb(light ? 0xA6 : 0x96, light ? FentMaterial.darken(base, 0.03f) : FentMaterial.lighten(base, 0.12f)));
+      put(palette, "backdrop", FentMaterial.argb(light ? 0x4A : 0x66, 0x000000));
+      put(palette, "inputBg", FentMaterial.argb(light ? 0x2E : 0x48, light ? 0xFFFFFF : 0x05060A));
+      put(palette, "card", FentMaterial.argb(light ? 0x0E : 0x1A, wash));
+      put(palette, "cardHover", FentMaterial.argb(light ? 0x17 : 0x26, wash));
+      put(palette, "cardActive", FentMaterial.argb(light ? 0x20 : 0x30, wash));
+      put(palette, "cardOutline", FentMaterial.argb(light ? 0x1A : 0x24, wash));
+      put(palette, "cardOutlineStrong", FentMaterial.argb(light ? 0x33 : 0x42, wash));
+      put(palette, "chip", FentMaterial.argb(light ? 0x0C : 0x14, wash));
+      put(palette, "chipHover", FentMaterial.argb(light ? 0x18 : 0x20, wash));
+      put(palette, "chipActive", FentMaterial.argb(light ? 0x22 : 0x2B, wash));
+      put(palette, "control", FentMaterial.argb(light ? 0x12 : 0x1C, wash));
+      put(palette, "controlHover", FentMaterial.argb(light ? 0x1F : 0x29, wash));
+      put(palette, "controlLift", FentMaterial.argb(light ? 0x0C : 0x16, wash));
+      put(palette, "controlActive", FentMaterial.argb(light ? 0x29 : 0x33, wash));
+      put(palette, "controlOutline", FentMaterial.argb(light ? 0x24 : 0x2B, wash));
+      put(palette, "controlOutlineHover", FentMaterial.argb(light ? 0x3D : 0x47, wash));
+      put(palette, "outline", FentMaterial.argb(light ? 0x1F : 0x22, wash));
+      put(palette, "scrollTrack", FentMaterial.argb(0x0F, wash));
+      put(palette, "scrollThumb", FentMaterial.argb(light ? 0x29 : 0x33, wash));
+      put(palette, "scrollThumbHover", FentMaterial.argb(light ? 0x4A : 0x59, wash));
+      put(palette, "scrollThumbActive", FentMaterial.argb(light ? 0x66 : 0x73, wash));
+      put(palette, "toggleOff", FentMaterial.argb(light ? 0x29 : 0x2E, wash));
+      put(palette, "textPrimary", FentMaterial.argb(0xF2, light ? 0x0B0B12 : 0xFFFFFF));
+      put(palette, "textOnBackdrop", FentMaterial.argb(0xFA, 0xFFFFFF));
+      put(palette, "textBody", FentMaterial.argb(0xE2, light ? 0x14141C : 0xFFFFFF));
+      put(palette, "textSecondary", FentMaterial.argb(light ? 0xB0 : 0xB8, light ? 0x1C1C26 : 0xFFFFFF));
+      put(palette, "textMuted", FentMaterial.argb(light ? 0x8A : 0x8F, light ? 0x24242E : 0xFFFFFF));
+      put(palette, "textFaint", FentMaterial.argb(light ? 0x66 : 0x5E, light ? 0x2C2C36 : 0xFFFFFF));
+      put(palette, "accent", FentMaterial.argb(0xFF, accent));
+      put(palette, "accentHover", FentMaterial.argb(0xFF, FentMaterial.lighten(accent, 0.14f)));
+      put(palette, "textOnAccent", FentMaterial.argb(0xFF, FentMaterial.luminance(accent) > 0.62f ? 0x0B0B12 : 0xFFFFFF));
+      put(palette, "accentOutline", FentMaterial.argb(0x66, accent));
+      put(palette, "dangerSoft", FentMaterial.argb(light ? 0x24 : 0x2B, 0xFF453A));
+      put(palette, "dangerHover", FentMaterial.argb(light ? 0x33 : 0x3D, 0xFF453A));
+      put(palette, "dangerText", FentMaterial.argb(0xFF, light ? 0xC42A20 : 0xFF8080));
+      put(palette, "controlDanger", FentMaterial.argb(light ? 0x2B : 0x33, 0xFF453A));
+      put(palette, "controlDangerHover", FentMaterial.argb(light ? 0x3D : 0x4A, 0xFF453A));
+      put(palette, "controlDangerText", FentMaterial.argb(0xFF, light ? 0xD63A2E : 0xFFA0A0));
    }
 
-   // The theme card's preview is blended from four corners, so the glass reads as a frosted pane
-   // with the accent glowing through the middle.
+   // The theme card's preview is blended from four corners, so the glass reads as a frosted pane with
+   // the accent glowing through the middle - the same base to accent gradient the real surfaces wear.
    private static int[] preview(int base, int accent) {
       return new int[] {
-         argb(0xFF, lighten(base, 0.18f)),
-         argb(0xFF, base),
-         argb(0xFF, mix(accent, 0xFFFFFF, 0.45f)),
-         argb(0xFF, accent)
+         FentMaterial.argb(0xFF, FentMaterial.lighten(base, 0.18f)),
+         FentMaterial.argb(0xFF, base),
+         FentMaterial.argb(0xFF, FentMaterial.mix(accent, 0xFFFFFF, 0.45f)),
+         FentMaterial.argb(0xFF, accent)
       };
    }
 
@@ -244,30 +264,6 @@ public final class FentAero {
       } catch (NumberFormatException exception) {
          return fallback;
       }
-   }
-
-   private static int argb(int alpha, int rgb) {
-      return (alpha & 0xFF) << 24 | rgb & 0xFFFFFF;
-   }
-
-   private static int lighten(int rgb, float amount) {
-      return mix(rgb, 0xFFFFFF, amount);
-   }
-
-   private static int darken(int rgb, float amount) {
-      return mix(rgb, 0x000000, amount);
-   }
-
-   private static int mix(int from, int to, float amount) {
-      float t = Math.max(0.0f, Math.min(1.0f, amount));
-      int red = Math.round((from >> 16 & 0xFF) + ((to >> 16 & 0xFF) - (from >> 16 & 0xFF)) * t);
-      int green = Math.round((from >> 8 & 0xFF) + ((to >> 8 & 0xFF) - (from >> 8 & 0xFF)) * t);
-      int blue = Math.round((from & 0xFF) + ((to & 0xFF) - (from & 0xFF)) * t);
-      return red << 16 | green << 8 | blue;
-   }
-
-   private static float luminance(int rgb) {
-      return (0.299f * (rgb >> 16 & 0xFF) + 0.587f * (rgb >> 8 & 0xFF) + 0.114f * (rgb & 0xFF)) / 255.0f;
    }
 
    private FentAero() {

@@ -26,6 +26,8 @@ import org.objectweb.asm.Type;
 //   @Shadow and @Overwrite methods still exist
 //   @Shadow fields still exist
 //   @Inject method selectors still resolve
+//   an @Inject handler takes the callback its target needs: CallbackInfo for a void target,
+//   CallbackInfoReturnable for one that returns a value, and nothing else
 //   @Redirect call sites still exist inside the method they point at
 // Usage: java MixinCheck <classpath> <mixinClassFileOrDir> [more...]
 public final class MixinCheck {
@@ -35,6 +37,9 @@ public final class MixinCheck {
    private static final String INJECT = "Lorg/spongepowered/asm/mixin/injection/Inject;";
    private static final String REDIRECT = "Lorg/spongepowered/asm/mixin/injection/Redirect;";
    private static final String AT = "Lorg/spongepowered/asm/mixin/injection/At;";
+   private static final String CALLBACK_INFO = "Lorg/spongepowered/asm/mixin/injection/callback/CallbackInfo;";
+   private static final String CALLBACK_RETURNABLE =
+      "Lorg/spongepowered/asm/mixin/injection/callback/CallbackInfoReturnable;";
 
    public static void main(String[] args) throws IOException {
       if (args.length < 2) {
@@ -109,6 +114,26 @@ public final class MixinCheck {
                   System.out.println("  BROKEN " + site.describe() + " absent from " + classModel.name.replace('/', '.'));
                }
             }
+            for (Injection injection : model.injections) {
+               List<String> returns = classModel.returnsOf(injection.selector);
+               if (returns.isEmpty()) {
+                  continue;
+               }
+               ++total;
+               // A name only selector can match several overloads; the handler has to suit all of them.
+               String wanted = null;
+               for (String value : returns) {
+                  String kind = "V".equals(value) ? "CallbackInfo" : "CallbackInfoReturnable";
+                  wanted = wanted == null || wanted.equals(kind) ? kind : "both";
+               }
+               String kind = callbackKind(injection.handler);
+               if (!wanted.equals(kind)) {
+                  ++broken;
+                  System.out.println("  BROKEN @Inject " + injection.handler + " takes "
+                     + (kind == null || kind.isEmpty() ? "no callback" : kind) + ", " + wanted
+                     + " is required by " + classModel.name.replace('/', '.') + "." + injection.selector);
+               }
+            }
             if (model.total() == 0) {
                System.out.println("  " + target.replace('/', '.') + ": nothing to check");
             }
@@ -136,6 +161,36 @@ public final class MixinCheck {
       }
    }
 
+   // An @Inject handler and one method selector it hangs off. Mixin checks the handler's trailing
+   // callback against the target's return type when it applies the mixin, in the game, so a mismatch
+   // is a failed apply at launch rather than a build error; this is the same rule, ahead of time.
+   private static final class Injection {
+      final String handler;
+      final String selector;
+
+      Injection(String handler, String selector) {
+         this.handler = handler;
+         this.selector = selector;
+      }
+   }
+
+   // The callback a handler declares, or null when it declares none of the two.
+   private static String callbackKind(String handler) {
+      int open = handler.indexOf('(');
+      if (open < 0) {
+         return null;
+      }
+      Type[] arguments = Type.getArgumentTypes(handler.substring(open));
+      if (arguments.length == 0) {
+         return "";
+      }
+      String last = arguments[arguments.length - 1].getDescriptor();
+      if (CALLBACK_INFO.equals(last)) {
+         return "CallbackInfo";
+      }
+      return CALLBACK_RETURNABLE.equals(last) ? "CallbackInfoReturnable" : "";
+   }
+
    // A call or field access a @Redirect expects inside one host method.
    private static final class CallSite {
       final String host;
@@ -156,6 +211,7 @@ public final class MixinCheck {
       final List<Member> members = new ArrayList<>();
       final List<String> selectors = new ArrayList<>();
       final List<CallSite> callSites = new ArrayList<>();
+      final List<Injection> injections = new ArrayList<>();
       private final String source;
 
       private MixinModel(String source) {
@@ -290,6 +346,7 @@ public final class MixinCheck {
          for (String host : pending.hosts) {
             if (!pending.redirect) {
                this.selectors.add(host);
+               this.injections.add(new Injection(pending.handler, host));
                continue;
             }
             if (pending.target == null) {
@@ -359,6 +416,27 @@ public final class MixinCheck {
          }
          Set<String> descriptors = this.methods.get(selector.substring(0, open));
          return descriptors != null && descriptors.contains(selector.substring(open));
+      }
+
+      // The return descriptors of every method a selector matches, empty when nothing does.
+      List<String> returnsOf(String selector) {
+         int open = selector.indexOf('(');
+         if (open < 0) {
+            Set<String> descriptors = this.methods.get(selector);
+            if (descriptors == null) {
+               return List.of();
+            }
+            List<String> returns = new ArrayList<>();
+            for (String descriptor : descriptors) {
+               returns.add(Type.getReturnType(descriptor).getDescriptor());
+            }
+            return returns;
+         }
+         Set<String> descriptors = this.methods.get(selector.substring(0, open));
+         if (descriptors == null || !descriptors.contains(selector.substring(open))) {
+            return List.of();
+         }
+         return List.of(Type.getReturnType(selector.substring(open)).getDescriptor());
       }
 
       boolean hasCall(String host, String member) {

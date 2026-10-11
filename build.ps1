@@ -1,7 +1,9 @@
 # Builds fent-<version>.jar against the installed SilentClient runtime.
 # Compiles net/**/*.java, stages the resources, then checks the packed jar.
-# Checks: mod id rules, every class named in fabric.mod.json and mixins.fent.json is present,
-# and every mixin target still resolves (tools/MixinCheck.java, skipped without the asm jars).
+# Checks: mod id rules, every class named in fabric.mod.json and mixins.fent.json is present, every
+# mixin target, call site and injection still resolves (tools/MixinCheck.java, skipped without the asm
+# jars), and the Aero material still reaches the menu surfaces it should (tools/MaterialCheck.java,
+# skipped with -SkipMixinCheck).
 # -GameDir <path> silentclient game dir, default %APPDATA%\silentclient-launcher\game
 # -Jdk <path>     jdk to use, default the first jdk 21 found
 # -Install        copy the jar into the launcher's fabric-mods folder and drop older builds
@@ -171,11 +173,26 @@ if (-not $SkipMixinCheck) {
     }
 }
 
+if (-not $SkipMixinCheck) {
+    # The material policy, on the shapes the client's own menu templates use: which nodes are panes,
+    # which are surfaces, what must never be filled, and the alphas themselves. Runs on the built
+    # classes, so it checks the code that ships rather than the source it was written from.
+    $toolDir = Join-Path $root "build\tools"
+    New-Item -ItemType Directory -Path $toolDir -Force | Out-Null
+    $materialCp = (@($classesDir, $silentclient, $gameJar, $loaderJar) + @($toolDir)) -join ";"
+    & $javac -nowarn -cp $materialCp -d $toolDir (Join-Path $root "tools\MaterialCheck.java")
+    if ($LASTEXITCODE -ne 0) { throw "tools/MaterialCheck.java did not compile" }
+    & (Join-Path $jdk "bin\java.exe") -cp "$toolDir;$materialCp" MaterialCheck
+    if ($LASTEXITCODE -ne 0) { throw "material check failed - the Aero material no longer reaches what it should" }
+}
+
 if ($Install) {
     $targets = New-Object System.Collections.Generic.List[string]
     $targets.Add($modsDir)
     $mirror = Join-Path $env:APPDATA ".minecraft\mods\$mcVersion"
-    if ((Test-Path -LiteralPath $mirror) -and (Get-ChildItem -LiteralPath $mirror -Filter "fent-*.jar" -File -ErrorAction SilentlyContinue)) {
+    # Whenever the mirror folder exists, it is a real mods folder for that setup, so it gets the
+    # jar too - the client can be launched from either place.
+    if (Test-Path -LiteralPath $mirror) {
         $targets.Add($mirror)
     }
 
@@ -210,6 +227,38 @@ if ($Install) {
             }
         }
         "installed $($installed[$target])"
+    }
+
+    # The launcher keeps a mod list per profile and deletes any jar the active profile does not
+    # name, so a build that is only copied in disappears at the next launch. Every profile that
+    # already carried a fent jar, and any profile named after the mod, is pointed at the new file.
+    $leaf = Split-Path -Leaf $jar
+    foreach ($target in ($targets | Select-Object -Unique)) {
+        $profilesPath = Join-Path $target ".silent-profiles.json"
+        if (-not (Test-Path -LiteralPath $profilesPath)) { continue }
+        try {
+            $profiles = Get-Content -LiteralPath $profilesPath -Raw | ConvertFrom-Json
+            $changed = $false
+            foreach ($profile in @($profiles.profiles)) {
+                $carried = @($profile.mods | Where-Object { $_ -like "fent-*.jar" }).Count -gt 0
+                if (-not $carried -and ($profile.name -notlike "*fent*")) { continue }
+                $mods = New-Object System.Collections.Generic.List[string]
+                foreach ($mod in @($profile.mods)) {
+                    if ($mod -notlike "fent-*.jar") { $mods.Add($mod) }
+                }
+                if (-not $mods.Contains($leaf)) { $mods.Add($leaf) }
+                $profile.mods = @($mods)
+                $changed = $true
+            }
+            if ($changed) {
+                $json = $profiles | ConvertTo-Json -Depth 8
+                [System.IO.File]::WriteAllText($profilesPath, $json, (New-Object System.Text.UTF8Encoding($false)))
+                "updated the profile mod list in $profilesPath"
+            }
+        }
+        catch {
+            Write-Warning "could not update .silent-profiles.json in ${target}: $($_.Exception.Message)"
+        }
     }
 }
 
