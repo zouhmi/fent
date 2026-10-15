@@ -6,20 +6,6 @@ import net.silentclient.fent.FentGlass;
 import net.silentclient.fent.FentMaterial;
 import net.silentclient.internal.K.f;
 
-// Checks what the Aero material does to a menu surface, on the shapes the client's own menu templates
-// use, without the game running. The theme work is otherwise only visible in a frame, and the two ways
-// it can quietly go wrong are both checkable here: a surface that should be themed being left flat,
-// and a node that is not a surface - text, an icon hit box, the full screen backdrop, the scrim behind
-// a dialog - being given a fill or a gradient it should not have.
-//
-// Sizes are the ones the templates declare (a mod row is 17 units tall, a theme card 34, a settings
-// row 22, an icon button 9 square), taken from assets/silentclient/menus. Absolute positions do not
-// matter to the policy, so every fixture is placed at the same spot and the screen is 1920x1080.
-//
-// The material numbers are checked as facts rather than left to a comment: a pane fill is well under a
-// quarter, a plate loses alpha, and a plate the user already made transparent is never pushed back up.
-//
-// Usage: java MaterialCheck <classpath with the client jar and the built classes>
 public final class MaterialCheck {
    private static final float SCREEN_WIDTH = 1920.0f;
    private static final float SCREEN_HEIGHT = 1080.0f;
@@ -28,15 +14,11 @@ public final class MaterialCheck {
    private static final List<String> failures = new ArrayList<String>();
 
    public static void main(String[] args) {
-      // The window and the dialog the client draws every screen in, and - the rule that fixed the
-      // invisible menu - a large plate that is not either of them stays a surface no matter how big
-      // it is, because a pane with nothing behind it to show through reads as an invisible sheet.
       expect("window", node("panel", 420.0f, 300.0f, "class", "window", "bg", "#CC14161B", "rounded", "6"), false, FentGlass.PANE);
       expect("dialog", node("panel", 300.0f, 160.0f, "class", "dialog", "bg", "#E014161B", "rounded", "4"), false, FentGlass.PANE);
       expect("large panel stays a surface", node("panel", 700.0f, 520.0f, "bg", "#B414161B", "rounded", "6"), false, FentGlass.SURFACE);
       expect("full width section stays a surface", node("panel", 1800.0f, 150.0f, "bg", "#B414161B", "rounded", "6"), false, FentGlass.SURFACE);
 
-      // The plates a list is made of: a mod row, a theme card, a settings row, a cosmetic card.
       expect("mod row", node("panel", 117.0f, 17.0f, "bg", "#FF1A1A1A", "rounded", "3"), false, FentGlass.SURFACE);
       expect("theme card", node("panel", 160.0f, 34.0f, "bg", "#FF1A1A1A", "rounded", "4"), false, FentGlass.SURFACE);
       expect("setting row", node("panel", 260.0f, 22.0f, "bg", "#FF1A1A1A", "rounded", "3"), false, FentGlass.SURFACE);
@@ -44,19 +26,12 @@ public final class MaterialCheck {
       expect("surface floor", node("panel", 40.0f, 10.0f, "bg", "#FF1A1A1A", "rounded", "2"), false, FentGlass.SURFACE);
       expect("chip below the floor", node("panel", 40.0f, 9.0f, "bg", "#FF1A1A1A", "rounded", "2"), false, FentGlass.NONE);
 
-      // A plate that only shows itself on hover is still a plate when the pointer is on it.
       expect("icon button, idle", node("panel", 120.0f, 20.0f, "hover-bg", "#FF1A1A1A", "rounded", "2"), false, FentGlass.NONE);
       expect("icon button, hovered", node("panel", 120.0f, 20.0f, "hover-bg", "#FF1A1A1A", "rounded", "2"), true, FentGlass.SURFACE);
 
-      // What must never be filled or graded.
       expect("text", node("text", 120.0f, 10.0f), false, FentGlass.NONE);
       expect("image", node("image", 9.0f, 9.0f, "src", "/icon.svg"), false, FentGlass.NONE);
       expect("transparent plate", node("panel", 200.0f, 40.0f, "bg", "#1A1A1A00", "rounded", "4"), false, FentGlass.NONE);
-      // A plate whose fill is a theme token, which is how the client's own templates write one. The
-      // resolver runs offline against the built in theme and returns white at a low alpha, which is
-      // also the faintest a real card gets, so this is the floor of the material the surface rule has
-      // to keep reaching. Values that are data bound - "${cardBg}" - only resolve in game, so the
-      // fixtures use what a bound node holds by the time it is painted.
       expect("token filled row", node("panel", 117.0f, 17.0f, "bg", "@card", "rounded", "3"), false, FentGlass.SURFACE);
       expect("full screen backdrop", node("panel", SCREEN_WIDTH, SCREEN_HEIGHT, "bg", "#73141414"), false, FentGlass.NONE);
       expect("scrim", node("panel", 600.0f, 400.0f, "class", "scrim", "bg", "#73141414"), false, FentGlass.NONE);
@@ -68,6 +43,7 @@ public final class MaterialCheck {
       paneMarking();
       surfaceGradient();
       plateAlpha();
+      textWhite();
 
       if (!failures.isEmpty()) {
          for (String failure : failures) {
@@ -80,10 +56,7 @@ public final class MaterialCheck {
       System.out.println("MaterialCheck: OK - " + total + " checks hold");
    }
 
-   // The pane fill is what used to be the theme's surface colour, so it is the number that decides how
-   // much of the blurred backdrop shows through: it has to be far below a quarter, and the hover state
-   // above it.
-   private static void paneFill() {
+    private static void paneFill() {
       check("pane fill is translucent", FentMaterial.PANE_FILL < 0x40);
       check("pane hover is above the idle fill", FentMaterial.PANE_FILL_HOVER > FentMaterial.PANE_FILL);
       check("pane gradient stops differ", FentMaterial.PANE_GRADIENT_TOP != FentMaterial.PANE_GRADIENT_BOTTOM);
@@ -91,9 +64,7 @@ public final class MaterialCheck {
       check("pane sheen is present", FentMaterial.PANE_SHEEN > 0.5f);
    }
 
-   // Marking a pane has to answer the fill, the hover fill, the highlight and the rim, and taking it
-   // off has to leave the node exactly as the template built it.
-   private static void paneMarking() {
+    private static void paneMarking() {
       f node = node("panel", 420.0f, 300.0f, "class", "window", "bg", "#CC14161B", "border", "#22FFFFFF", "rounded", "6");
       String[] saved = FentGlass.markPane(node);
       check("glass is set", "true".equals(node.b.get("glass")));
@@ -109,9 +80,7 @@ public final class MaterialCheck {
       check("the theme's own border is put back", "#22FFFFFF".equals(node.b.get("border")));
    }
 
-   // A surface keeps its own colour and gains a gradient: the top stop is its colour lifted, the
-   // bottom is pulled toward the accent, the alpha is its own, and the hover colour changes both.
-   private static void surfaceGradient() {
+    private static void surfaceGradient() {
       f node = node("panel", 117.0f, 17.0f, "bg", "#FF1A1A1A", "hover-bg", "#FF262626", "rounded", "3");
       String[] saved = FentGlass.surface(node, false);
       check("a surface is graded", saved != null && node.b.containsKey("gradient-from") && node.b.containsKey("gradient-to"));
@@ -120,7 +89,6 @@ public final class MaterialCheck {
       int to = rgbIn(node.b.get("gradient-to"));
       check("the two stops differ", from != to);
       int surfaceAlpha = 0xFF;
-      // A surface is never made more opaque than the colour its own template gave it.
       check("the top stop adds no opacity", alphaIn(node.b.get("gradient-from")) <= surfaceAlpha);
       check("the bottom stop adds no opacity", alphaIn(node.b.get("gradient-to")) <= surfaceAlpha);
       check("the gradient runs downhill", alphaIn(node.b.get("gradient-to")) <= alphaIn(node.b.get("gradient-from")));
@@ -132,9 +100,7 @@ public final class MaterialCheck {
       check("hover grades from the hover colour", rgbIn(hovered.b.get("gradient-from")) != from);
    }
 
-   // The HUD plate: the material takes alpha off, never adds it, and never overrides a plate the user
-   // has already made more transparent than the floor.
-   private static void plateAlpha() {
+    private static void plateAlpha() {
       int opaque = 0xFF1A1A1A;
       int softened = FentMaterial.soften(opaque, FentMaterial.PLATE_ALPHA, FentMaterial.PLATE_FLOOR);
       check("a plate loses alpha", FentMaterial.alphaOf(softened) < FentMaterial.alphaOf(opaque));
@@ -146,6 +112,30 @@ public final class MaterialCheck {
       check("the tile plate is lighter than a plain one", FentMaterial.TILE_ALPHA < FentMaterial.PLATE_ALPHA);
       check("the tile floor is below the plate floor", FentMaterial.TILE_FLOOR < FentMaterial.PLATE_FLOOR);
    }
+
+    private static void textWhite() {
+      check("plain grey goes white", FentGlass.whiteFor(0xFF8A8F98) == 0xFFFFFFFF);
+      check("dim white goes white", FentGlass.whiteFor(0x66FFFFFF) == 0xFFFFFFFF);
+      check("pure white is left alone", FentGlass.whiteFor(0xFFFFFFFF) == 0);
+      check("transparent is left alone", FentGlass.whiteFor(0x00000000) == 0);
+      check("accent blue is left alone", FentGlass.whiteFor(0xFF4C9FFF) == 0);
+      check("rarity gold is left alone", FentGlass.whiteFor(0xFFF5A524) == 0);
+      check("danger red is left alone", FentGlass.whiteFor(0xFFFF453A) == 0);
+      check("online green is left alone", FentGlass.whiteFor(0xFF4ADE80) == 0);
+      check("text token grey goes white", FentGlass.whiteForToken("textSecondary", 0xFF8A8F98) == 0xFFFFFFFF);
+      check("at-prefixed token works", FentGlass.whiteForToken("@textMuted", 0xFF8A8F98) == 0xFFFFFFFF);
+      check("accent token is left alone", FentGlass.whiteForToken("accent", 0xFF8A8F98) == 0);
+      check("textOnAccent is left alone", FentGlass.whiteForToken("textOnAccent", 0xFF8A8F98) == 0);
+      check("null token is left alone", FentGlass.whiteForToken(null, 0xFF8A8F98) == 0);
+      f grey = node("text", 120.0f, 10.0f, "color", "#8A8F98FF");
+      check("a grey label is whitened", FentGlass.whiten(grey) != null && "#FFFFFFFF".equals(grey.b.get("color")));
+      FentGlass.restore(grey, new String[] {"#8A8F98FF"}, FentGlass.textKeys());
+      check("the label colour is put back", "#8A8F98FF".equals(grey.b.get("color")));
+      f blue = node("text", 120.0f, 10.0f, "color", "#4C9FFFFF");
+      check("a blue label is left alone", FentGlass.whiten(blue) == null && "#4C9FFFFF".equals(blue.b.get("color")));
+      f plain = node("panel", 200.0f, 40.0f, "bg", "#FF1A1A1A", "rounded", "4");
+      check("panels are not whitened", FentGlass.whiten(plain) == null);
+    }
 
    private static void expect(String what, f node, boolean hover, int wanted) {
       ++total;
@@ -179,22 +169,35 @@ public final class MaterialCheck {
       return node;
    }
 
-   // The two halves of the colour encoding the material writes into a node, read back here so a change
-   // in the format shows up as a failed check rather than as a frame that looks wrong.
-   private static int alphaIn(String hex) {
+    private static int alphaIn(String hex) {
       checkValue(hex);
-      return Integer.parseInt(hex.substring(7, 9), 16);
+      if (hex == null || hex.length() != 9 || hex.charAt(0) != '#') {
+         return -1;
+      }
+      try {
+         return Integer.parseInt(hex.substring(7, 9), 16);
+      } catch (NumberFormatException exception) {
+         failures.add("a colour is not #RRGGBBAA: " + hex);
+         return -1;
+      }
    }
 
    private static int rgbIn(String hex) {
       checkValue(hex);
-      return (int)Long.parseLong(hex.substring(1, 7), 16);
+      if (hex == null || hex.length() != 9 || hex.charAt(0) != '#') {
+         return 0;
+      }
+      try {
+         return (int)Long.parseLong(hex.substring(1, 7), 16);
+      } catch (NumberFormatException exception) {
+         failures.add("a colour is not #RRGGBBAA: " + hex);
+         return 0;
+      }
    }
 
    private static void checkValue(String hex) {
       if (hex == null || hex.length() != 9 || hex.charAt(0) != '#') {
          failures.add("a colour is not #RRGGBBAA: " + hex);
-         throw new IllegalStateException("colour " + hex);
       }
    }
 

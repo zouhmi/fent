@@ -1,16 +1,141 @@
 package net.silentclient.fent;
 
+import com.google.gson.Gson;
+import com.google.gson.JsonObject;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Locale;
+import net.fabricmc.loader.api.FabricLoader;
 import net.silentclient.common.api.services.cosmetics.CosmeticType;
-import net.silentclient.internal.ai.r;
 
-// Reads the Unlocker toggles from SilentClient's settings store.
-// Keys look like setting.unlocker.cosmetics and setting.unlocker.cosmetics.cape.
 public final class FentUnlocks {
-   // Unset means on, so a fresh install unlocks without touching the screen.
+   private static final com.google.gson.Gson GSON = new Gson();
+   private static final long MTIME_TTL_NANOS = 300000000L;
+
+   private static Path configPath() {
+      return FabricLoader.getInstance().getGameDir().resolve("silentclient").resolve("config.json");
+   }
+
+   private static volatile JsonObject cached;
+   private static volatile Path cachedPath;
+   private static volatile long cachedModified;
+   private static volatile long lastProbeNanos;
+
+   private static synchronized JsonObject readConfig() {
+      try {
+         Path path = configPath();
+         long now = System.nanoTime();
+         if (cached != null && path.equals(cachedPath) && now - lastProbeNanos < MTIME_TTL_NANOS
+            && (now >= lastProbeNanos)) {
+            return cached;
+         }
+         lastProbeNanos = now;
+         if (!Files.exists(path)) {
+            cached = new JsonObject();
+            cachedPath = path;
+            cachedModified = 0L;
+            return cached;
+         }
+         long modified = Files.getLastModifiedTime(path).toMillis();
+         if (cached != null && path.equals(cachedPath) && modified == cachedModified) {
+            return cached;
+         }
+         String text = Files.readString(path);
+         JsonObject object = GSON.fromJson(text, JsonObject.class);
+         object = object == null ? new JsonObject() : object;
+         cached = object;
+         cachedPath = path;
+         cachedModified = modified;
+         return object;
+      } catch (Throwable throwable) {
+         JsonObject have = cached;
+         return have == null ? new JsonObject() : have;
+      }
+   }
+
+   private static String fileValue(String key) {
+      try {
+         JsonObject root = readConfig();
+         if (root.has("settings") && root.get("settings").isJsonObject()) {
+            JsonObject settings = root.getAsJsonObject("settings");
+            if (settings.has(key) && !settings.get(key).isJsonNull()) {
+               return settings.get(key).getAsString();
+            }
+         }
+         if (root.has(key) && !root.get(key).isJsonNull()) {
+            return root.get(key).getAsString();
+         }
+      } catch (Throwable ignored) {
+      }
+      return "";
+   }
+
+   private static String value(String key) {
+      try {
+         String live = net.silentclient.internal.aj.t.d(key);
+         if (live != null) {
+            return live;
+         }
+      } catch (Throwable ignored) {
+      }
+      return fileValue(key);
+   }
+
    private static boolean on(String key) {
-      String value = r.d("setting.unlocker." + key);
+      String value = value("unlocker." + key);
       return value.isEmpty() || Boolean.parseBoolean(value);
+   }
+
+   public static boolean onRaw(String key) {
+      return on(key);
+   }
+
+   public static String string(String key) {
+      return value(key);
+   }
+
+   public static synchronized void setString(String key, String value) {
+      String stored = value == null ? "" : value;
+      boolean throughStore = false;
+      try {
+         net.silentclient.internal.aj.t.a(key, stored);
+         throughStore = true;
+      } catch (Throwable ignored) {
+      }
+      if (throughStore) {
+         cached = null;
+         lastProbeNanos = 0L;
+         return;
+      }
+      try {
+         Path path = configPath();
+         JsonObject root = readConfig();
+         JsonObject settings = null;
+         if (root.has("settings") && root.get("settings").isJsonObject()) {
+            settings = root.getAsJsonObject("settings");
+         } else {
+            settings = new JsonObject();
+            root.add("settings", settings);
+         }
+         if (stored.isEmpty()) {
+            settings.remove(key);
+            root.remove(key);
+         } else {
+            settings.addProperty(key, stored);
+         }
+         Path parent = path.getParent();
+         if (parent != null) {
+            Files.createDirectories(parent);
+         }
+         Files.writeString(path, GSON.toJson(root));
+         cached = root;
+         cachedPath = path;
+         lastProbeNanos = System.nanoTime();
+         if (Files.exists(path)) {
+            cachedModified = Files.getLastModifiedTime(path).toMillis();
+         }
+      } catch (Throwable ignored) {
+      }
    }
 
    public static boolean cosmetics() {
@@ -29,43 +154,38 @@ public final class FentUnlocks {
       return on("premium");
    }
 
-   // On means the active minute reports stay off.
    public static boolean coinsOff() {
       return on("coins.off");
    }
 
-   // On means the Aero theme's Liquid Glass pass runs over the menu panels.
-   public static boolean aeroGlass() {
+   public static boolean liquidGlassUi() {
       return on("aero.glass");
    }
 
-   // On means the same material reaches the in-game HUD widgets.
-   public static boolean aeroHud() {
+   public static boolean liquidGlassHud() {
       return on("aero.hud");
    }
 
-   // On means the Dynamic Widget island samples the world behind it and bends it, so the glass shows
-   // what is under the widget instead of only lighting its edge.
-   public static boolean aeroRefraction() {
+   public static boolean liquidGlassRefraction() {
       return on("aero.refraction");
    }
 
-   // On means a fetched track's lyrics are kept on disk and read back next time.
    public static boolean lyricsCache() {
       return on("lyrics.cache");
    }
 
-   // On means a settings row keeps no plate, so its contents sit straight on the menu backdrop.
    public static boolean transparentRows() {
       return on("rows.transparent");
    }
 
-   // On means a colour setting's swatch shows the colour but no longer opens the colour editor.
    public static boolean hideColorPicker() {
       return on("colorpicker.off");
    }
 
-   // Master switch plus the per type switch, so capes, wings, pets and auras can differ.
+   public static boolean shareCosmetics() {
+      return on("share.cosmetics");
+   }
+
    public static boolean type(CosmeticType type) {
       if (type == null) {
          return cosmetics();

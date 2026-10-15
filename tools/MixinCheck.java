@@ -21,21 +21,15 @@ import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
 
-// Checks a mixin jar against the SilentClient classes it targets, so a runtime update
-// fails the build instead of the game launch. Verifies:
-//   @Shadow and @Overwrite methods still exist
-//   @Shadow fields still exist
-//   @Inject method selectors still resolve
-//   an @Inject handler takes the callback its target needs: CallbackInfo for a void target,
-//   CallbackInfoReturnable for one that returns a value, and nothing else
-//   @Redirect call sites still exist inside the method they point at
-// Usage: java MixinCheck <classpath> <mixinClassFileOrDir> [more...]
 public final class MixinCheck {
    private static final String MIXIN = "Lorg/spongepowered/asm/mixin/Mixin;";
    private static final String SHADOW = "Lorg/spongepowered/asm/mixin/Shadow;";
    private static final String OVERWRITE = "Lorg/spongepowered/asm/mixin/Overwrite;";
    private static final String INJECT = "Lorg/spongepowered/asm/mixin/injection/Inject;";
    private static final String REDIRECT = "Lorg/spongepowered/asm/mixin/injection/Redirect;";
+   private static final String MODIFY_ARG = "Lorg/spongepowered/asm/mixin/injection/ModifyArg;";
+   private static final String MODIFY_ARGS = "Lorg/spongepowered/asm/mixin/injection/ModifyArgs;";
+   private static final String MODIFY_VAR = "Lorg/spongepowered/asm/mixin/injection/ModifyVariable;";
    private static final String AT = "Lorg/spongepowered/asm/mixin/injection/At;";
    private static final String CALLBACK_INFO = "Lorg/spongepowered/asm/mixin/injection/callback/CallbackInfo;";
    private static final String CALLBACK_RETURNABLE =
@@ -120,7 +114,6 @@ public final class MixinCheck {
                   continue;
                }
                ++total;
-               // A name only selector can match several overloads; the handler has to suit all of them.
                String wanted = null;
                for (String value : returns) {
                   String kind = "V".equals(value) ? "CallbackInfo" : "CallbackInfoReturnable";
@@ -148,7 +141,6 @@ public final class MixinCheck {
       System.out.println("MixinCheck: OK - " + total + " references resolve");
    }
 
-   // A shadowed field: name plus descriptor.
    private static final class Member {
       final String name;
       final String descriptor;
@@ -161,9 +153,6 @@ public final class MixinCheck {
       }
    }
 
-   // An @Inject handler and one method selector it hangs off. Mixin checks the handler's trailing
-   // callback against the target's return type when it applies the mixin, in the game, so a mismatch
-   // is a failed apply at launch rather than a build error; this is the same rule, ahead of time.
    private static final class Injection {
       final String handler;
       final String selector;
@@ -174,7 +163,6 @@ public final class MixinCheck {
       }
    }
 
-   // The callback a handler declares, or null when it declares none of the two.
    private static String callbackKind(String handler) {
       int open = handler.indexOf('(');
       if (open < 0) {
@@ -191,7 +179,6 @@ public final class MixinCheck {
       return CALLBACK_RETURNABLE.equals(last) ? "CallbackInfoReturnable" : "";
    }
 
-   // A call or field access a @Redirect expects inside one host method.
    private static final class CallSite {
       final String host;
       final String member;
@@ -278,10 +265,13 @@ public final class MixinCheck {
                         model.selectors.add(name + descriptor);
                         return null;
                      }
-                     if (!INJECT.equals(annotation) && !REDIRECT.equals(annotation)) {
+                     if (!INJECT.equals(annotation) && !REDIRECT.equals(annotation)
+                        && !MODIFY_ARG.equals(annotation) && !MODIFY_ARGS.equals(annotation)
+                        && !MODIFY_VAR.equals(annotation)) {
                         return null;
                      }
-                     Pending pending = new Pending(handler, REDIRECT.equals(annotation));
+                     boolean checkCallback = INJECT.equals(annotation) || REDIRECT.equals(annotation);
+                     Pending pending = new Pending(handler, REDIRECT.equals(annotation), checkCallback);
                      return new AnnotationVisitor(Opcodes.ASM9) {
                         @Override
                         public void visit(String key, Object value) {
@@ -302,7 +292,6 @@ public final class MixinCheck {
                                  }
                               };
                            }
-                           // at() is declared as At[], so ASM hands it over as an array.
                            if (!"at".equals(key)) {
                               return null;
                            }
@@ -346,7 +335,9 @@ public final class MixinCheck {
          for (String host : pending.hosts) {
             if (!pending.redirect) {
                this.selectors.add(host);
-               this.injections.add(new Injection(pending.handler, host));
+               if (pending.checkCallback) {
+                  this.injections.add(new Injection(pending.handler, host));
+               }
                continue;
             }
             if (pending.target == null) {
@@ -359,7 +350,6 @@ public final class MixinCheck {
          }
       }
 
-      // "Lnet/foo/Bar;name(desc)" becomes "net/foo/Bar.name(desc)", fields keep their type suffix.
       private static String externalToMember(String target) {
          if (!target.startsWith("L")) {
             return target;
@@ -372,16 +362,17 @@ public final class MixinCheck {
    private static final class Pending {
       final String handler;
       final boolean redirect;
+      final boolean checkCallback;
       final List<String> hosts = new ArrayList<>();
       String target;
 
-      Pending(String handler, boolean redirect) {
+      Pending(String handler, boolean redirect, boolean checkCallback) {
          this.handler = handler;
          this.redirect = redirect;
+         this.checkCallback = checkCallback;
       }
    }
 
-   // Method, field and call tables of one target class.
    private static final class ClassModel {
       final String name;
       private final Map<String, Set<String>> methods = new HashMap<>();
@@ -418,7 +409,6 @@ public final class MixinCheck {
          return descriptors != null && descriptors.contains(selector.substring(open));
       }
 
-      // The return descriptors of every method a selector matches, empty when nothing does.
       List<String> returnsOf(String selector) {
          int open = selector.indexOf('(');
          if (open < 0) {
@@ -499,7 +489,6 @@ public final class MixinCheck {
                }
             }
             catch (IOException ignored) {
-               // not a readable zip, try the next classpath entry
             }
          }
          return Optional.empty();

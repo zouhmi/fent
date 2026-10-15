@@ -2,6 +2,7 @@ package net.silentclient.fent.mixin;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import net.silentclient.internal.D.p;
@@ -14,8 +15,6 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-// Adds an "Unlocker" page to Modules > Settings.
-// p.a is the category button list, p.b holds the rows per category.
 @Mixin(targets = "net.silentclient.internal.D.p")
 public abstract class FentSettingsMixin {
    @Shadow
@@ -25,12 +24,13 @@ public abstract class FentSettingsMixin {
 
    @Shadow
    @Final
+   @Mutable
    private static Map<String, List<p.b>> b;
 
    @Inject(method = "<clinit>", at = @At("TAIL"))
    private static void fent$addUnlocker(CallbackInfo ci) {
       List<p.a> categories = new ArrayList<p.a>(a);
-      categories.add(new p.a("unlocker", "Unlocker"));
+      categories.add(new p.a("unlocker", "Fent"));
       a = categories;
 
       List<p.b> rows = new ArrayList<p.b>();
@@ -46,17 +46,22 @@ public abstract class FentSettingsMixin {
       rows.add(fent$toggle("emotes", "Unlock Emotes"));
       rows.add(fent$toggle("themes", "Unlock Themes"));
       rows.add(fent$toggle("premium", "Unlock Premium"));
-      rows.add(fent$toggle("aero.glass", "Aero Glass UI"));
-      rows.add(fent$toggle("aero.hud", "Aero Glass HUD"));
-      rows.add(fent$toggle("aero.refraction", "Aero Glass Refraction"));
+      rows.add(fent$toggle("aero.glass", "Liquid Glass UI"));
+      rows.add(fent$toggle("aero.hud", "Liquid Glass HUD"));
+      rows.add(fent$toggle("aero.refraction", "Liquid Glass Refraction"));
       rows.add(fent$toggle("rows.transparent", "Transparent Setting Rows"));
       rows.add(fent$toggle("colorpicker.off", "Hide Colour Picker"));
       rows.add(fent$toggle("lyrics.cache", "Cache Lyrics"));
       rows.add(fent$toggle("coins.off", "Keep Coins Off"));
-      b.put("unlocker", rows);
+      rows.add(fent$toggle("share.cosmetics", "Share Cosmetics (Fent-to-Fent)"));
+      try {
+         b = new HashMap<String, List<p.b>>(b);
+         b.put("unlocker", rows);
+      } catch (Throwable throwable) {
+         System.err.println("[Fent] could not add the Unlocker page: " + throwable);
+      }
    }
 
-   // Toggle row: category, key, label, type, default, options, min, max, step.
    @Unique
    private static p.b fent$toggle(String key, String label) {
       return new p.b("unlocker", key, label, "toggle", "true", Collections.<String>emptyList(), 0, 0, 0);

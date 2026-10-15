@@ -20,7 +20,9 @@
     "FentRowsMixin",
     "FentSettingsMixin",
     "FentStrokesMixin",
+    "FentTextMixin",
     "FentThemesMixin",
+    "FentTokensMixin",
     "FentWidgetMixin"
   ]
 }

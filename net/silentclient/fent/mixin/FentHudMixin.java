@@ -6,15 +6,6 @@ import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Redirect;
 
-// net.silentclient.internal.V.c is the base every HUD module shares, and a(ModContext, width, height,
-// fallback) is the plate painter its widgets call before they draw their contents: the module's own
-// background colour, rounded by the module's own radius, at the module's own position and scale.
-//
-// The plate itself is what the user configured, so this does not replace the call - it takes it over.
-// Aero draws the same rectangle, with the alpha lowered so the world shows through, and, where a real
-// blurred backdrop could be sampled from the framebuffer, with that behind it. The lit top edge and
-// the hairline go on afterwards. A module that is not under Aero, or is being drawn into the modules
-// menu preview, gets its own call straight back.
 @Mixin(targets = "net.silentclient.internal.V.c")
 public abstract class FentHudMixin {
    @Redirect(

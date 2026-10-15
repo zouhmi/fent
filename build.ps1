@@ -1,18 +1,3 @@
-# Builds fent-<version>.jar against the installed SilentClient runtime.
-# Compiles net/**/*.java, stages the resources, then checks the packed jar.
-# Checks: mod id rules, every class named in fabric.mod.json and mixins.fent.json is present, every
-# mixin target, call site and injection still resolves (tools/MixinCheck.java, skipped without the asm
-# jars), and the Aero material still reaches the menu surfaces it should (tools/MaterialCheck.java,
-# skipped with -SkipMixinCheck).
-# -GameDir <path> silentclient game dir, default %APPDATA%\silentclient-launcher\game
-# -Jdk <path>     jdk to use, default the first jdk 21 found
-# -Install        copy the jar into the launcher's fabric-mods folder and drop older builds
-#                 (two fent jars in there would abort the launch with a duplicate mod id)
-#                 some setups also run the game from .minecraft\mods\<version>, that mirror
-#                 gets the same treatment when a fent jar already lives there
-# -SkipMixinCheck skip the mixin target check
-# -Wait           with -Install, retry the swap while the game is running, so it lands
-#                 when the game closes instead of failing on a jar the game has open
 param(
     [string]$GameDir = "$env:APPDATA\silentclient-launcher\game",
     [string]$Jdk = "",
@@ -55,7 +40,6 @@ function Resolve-Jdk {
     }
     if ($usable.Count -eq 0) { throw "no JDK with javac/jar found - pass -Jdk <path>" }
 
-    # Prefer jdk 21, same major as the runtime.
     $jdk21 = $usable | Where-Object { $_.Feature -eq 21 } | Select-Object -First 1
     if ($jdk21) { return $jdk21.JdkHome }
 
@@ -83,6 +67,7 @@ $lib = Join-Path $GameDir "fabric\libraries"
 $silentclient = Find-Jar -Directory $modsDir -Pattern "client-runtime-*.jar"
 $mixinJar = Find-Jar -Directory $lib -Pattern "sponge-mixin-*.jar"
 $loaderJar = Find-Jar -Directory $lib -Pattern "fabric-loader-*.jar"
+$gsonJar = Find-Jar -Directory $lib -Pattern "gson-*.jar"
 $gameJar = Join-Path $GameDir "fabric\$mcVersion-client.jar"
 if (-not (Test-Path -LiteralPath $gameJar)) { throw "minecraft client jar not found at $gameJar" }
 "compiling against $silentclient"
@@ -91,8 +76,6 @@ $manifestPath = Join-Path $root "fabric.mod.json"
 $mixinConfigPath = Join-Path $root "mixins.fent.json"
 $manifest = Get-Content -LiteralPath $manifestPath -Raw | ConvertFrom-Json
 
-# Fabric ids are [a-z0-9-_]{1,64}, no dots, no uppercase. Fail here, not at launch.
-# -cnotmatch: -notmatch is case insensitive, Fabric's check is not.
 $id = $manifest.id
 if ($id -cnotmatch '^[a-z0-9_-]{1,64}$') {
     throw "invalid fabric mod id '$id' (allowed: a-z 0-9 - _ ; max 64 chars)"
@@ -102,22 +85,19 @@ if (-not $version -or $version -notmatch '^[0-9A-Za-z][0-9A-Za-z._+-]{0,63}$') {
     throw "invalid version '$version' in fabric.mod.json"
 }
 
-# Jar name comes from the manifest version.
 $jar = Join-Path $root "fent-$version.jar"
 $classesDir = Join-Path $root "build\classes"
 $stageDir = Join-Path $root "build\jar"
 
-$cp = @($silentclient, $mixinJar, $loaderJar, $gameJar) -join ";"
+$cp = @($silentclient, $mixinJar, $loaderJar, $gsonJar, $gameJar) -join ";"
 
 Remove-Item -LiteralPath (Join-Path $root "build") -Recurse -Force -ErrorAction SilentlyContinue
 New-Item -ItemType Directory -Path $classesDir -Force | Out-Null
 New-Item -ItemType Directory -Path $stageDir -Force | Out-Null
 
-# Only the mod tree is compiled, tools/ stays out of the jar.
 $sources = Get-ChildItem -Path (Join-Path $root "net") -Recurse -Filter *.java | ForEach-Object { $_.FullName }
 if (-not $sources) { throw "no sources found under $root\net" }
 
-# -proc:none disables Mixin's annotation processor, which needs ASM on the processor path.
 & $javac --release 21 -proc:none -nowarn -cp $cp -d $classesDir @sources
 if ($LASTEXITCODE -ne 0) { throw "javac failed" }
 
@@ -174,9 +154,6 @@ if (-not $SkipMixinCheck) {
 }
 
 if (-not $SkipMixinCheck) {
-    # The material policy, on the shapes the client's own menu templates use: which nodes are panes,
-    # which are surfaces, what must never be filled, and the alphas themselves. Runs on the built
-    # classes, so it checks the code that ships rather than the source it was written from.
     $toolDir = Join-Path $root "build\tools"
     New-Item -ItemType Directory -Path $toolDir -Force | Out-Null
     $materialCp = (@($classesDir, $silentclient, $gameJar, $loaderJar) + @($toolDir)) -join ";"
@@ -190,13 +167,10 @@ if ($Install) {
     $targets = New-Object System.Collections.Generic.List[string]
     $targets.Add($modsDir)
     $mirror = Join-Path $env:APPDATA ".minecraft\mods\$mcVersion"
-    # Whenever the mirror folder exists, it is a real mods folder for that setup, so it gets the
-    # jar too - the client can be launched from either place.
     if (Test-Path -LiteralPath $mirror) {
         $targets.Add($mirror)
     }
 
-    # Drop older builds in every target first, so one locked folder aborts before anything is copied.
     $installed = @{}
     foreach ($target in ($targets | Select-Object -Unique)) {
         $file = Join-Path $target (Split-Path -Leaf $jar)
@@ -229,9 +203,6 @@ if ($Install) {
         "installed $($installed[$target])"
     }
 
-    # The launcher keeps a mod list per profile and deletes any jar the active profile does not
-    # name, so a build that is only copied in disappears at the next launch. Every profile that
-    # already carried a fent jar, and any profile named after the mod, is pointed at the new file.
     $leaf = Split-Path -Leaf $jar
     foreach ($target in ($targets | Select-Object -Unique)) {
         $profilesPath = Join-Path $target ".silent-profiles.json"

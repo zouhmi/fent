@@ -1,26 +1,6 @@
 package net.silentclient.fent;
 
-// The Aero material in one place: the alpha every surface is drawn with, the numbers the glass and
-// the HUD plates use, and the colour maths behind them.
-//
-// Two things moved in here. The colour helpers (mix, lighten, darken, luminance, argb, hex) used to
-// be copied into both the theme and the glass painter, which is how the two drifted apart; the
-// palette and the surfaces now share one implementation. And every alpha, sheen strength and floor
-// now lives in a named constant, so "make it more transparent" is a number here instead of a hunt
-// through three classes.
-//
-// The scale is deliberate. Menu surfaces are far more transparent than they were: a pane is a sheet
-// over the client's own blurred menu backdrop, so a low fill costs nothing in legibility, and cards
-// keep their own faint wash and gain a gradient rather than an opaque plate. The HUD is held back,
-// because a widget is read over the world and not over a blur: its plate keeps enough body to stay
-// readable, and only the edge and the light are added.
 public final class FentMaterial {
-   // ----------------------------------------------------------------------------------------------
-   // Menu panes: a window or a dialog. The engine's glass path fills a pane with the node's own
-   // background colour, which for the shipped themes is an almost opaque surface token - that is
-   // what used to hide the backdrop. Aero answers with an explicit, much lower fill instead, and the
-   // base to accent gradient underneath it carries the colour.
-   // ----------------------------------------------------------------------------------------------
    public static final int PANE_FILL = 0x1C;
    public static final int PANE_FILL_HOVER = 0x26;
    public static final int PANE_GRADIENT_TOP = 0x24;
@@ -33,33 +13,21 @@ public final class FentMaterial {
    public static final float PANE_SHADOW_BLUR = 10.0f;
    public static final float PANE_SHADOW_DROP = 3.0f;
 
-   // A surface: every other plate in the menu - cards, rows, wells, fields, pills. It keeps its own
-   // fill and its own hover colour, and gains the gradient: the top stop lifts its colour, the
-   // bottom stop pulls it toward the accent, so a list of rows reads as one lit sheet instead of a
-   // row of flat bars.
-   public static final float SURFACE_LIFT = 0.30f;
-   public static final float SURFACE_ACCENT = 0.42f;
+   public static final float SURFACE_LIFT = 0.18f;
+   public static final float SURFACE_ACCENT = 0.2f;
    public static final float SURFACE_TOP_ALPHA = 1.0f;
-   public static final float SURFACE_BOTTOM_ALPHA = 0.78f;
+   public static final float SURFACE_BOTTOM_ALPHA = 0.82f;
    public static final float SURFACE_ANGLE = 90.0f;
 
-   // ----------------------------------------------------------------------------------------------
-   // The in-game HUD. The plate is the module's own colour: only the alpha moves, and only down to
-   // the floor, so a widget the user already made transparent is left alone.
-   // ----------------------------------------------------------------------------------------------
    public static final float PLATE_ALPHA = 0.76f;
    public static final int PLATE_FLOOR = 116;
    public static final float PLATE_SHEEN = 0.62f;
 
-   // A key or a cell that is its own plate (Keystrokes, Mouse Strokes): the same treatment, a shade
-   // softer, because those are many small tiles rather than one body.
    public static final float TILE_ALPHA = 0.7f;
    public static final int TILE_FLOOR = 92;
-   public static final int TILE_GRADIENT_TOP = 0x1C;
+   public static final int TILE_SHEEN = 0x1C;
    public static final int TILE_RIM = 0x38;
 
-   // The plate over a real blurred backdrop, like the island's: the backdrop is already a picture of
-   // what is behind, so the plate goes lighter still and the world shows through it.
    public static final float BACKDROP_PLATE_ALPHA = 0.62f;
    public static final int BACKDROP_PLATE_FLOOR = 132;
 
@@ -79,8 +47,6 @@ public final class FentMaterial {
       return (alpha & 0xFF) << 24 | colour & 0xFFFFFF;
    }
 
-   // A plate alpha scaled by a factor, never below the floor unless the user's own alpha was lower:
-   // a widget that is already see through keeps what it has instead of being pushed opaque again.
    public static int soften(int colour, float factor, int floor) {
       int alpha = alphaOf(colour);
       if (alpha == 0) {
@@ -93,7 +59,6 @@ public final class FentMaterial {
       return withAlpha(colour, softened);
    }
 
-   // RGB only, the way the theme tokens are written; alphas are set by the caller.
    public static int mix(int from, int to, float amount) {
       float t = amount < 0.0f ? 0.0f : (amount > 1.0f ? 1.0f : amount);
       int red = Math.round((from >> 16 & 0xFF) + ((to >> 16 & 0xFF) - (from >> 16 & 0xFF)) * t);
@@ -114,9 +79,31 @@ public final class FentMaterial {
       return (0.299f * (rgb >> 16 & 0xFF) + 0.587f * (rgb >> 8 & 0xFF) + 0.114f * (rgb & 0xFF)) / 255.0f;
    }
 
-   // #RRGGBBAA, the order the node painter reads.
+   public static float saturation(int rgb) {
+      int red = rgb >> 16 & 0xFF;
+      int green = rgb >> 8 & 0xFF;
+      int blue = rgb & 0xFF;
+      int max = Math.max(red, Math.max(green, blue));
+      if (max == 0) {
+         return 0.0f;
+      }
+      int min = Math.min(red, Math.min(green, blue));
+      return (float)(max - min) / (float)max;
+   }
+
+   private static final char[] HEX_DIGITS = "0123456789ABCDEF".toCharArray();
+
    public static String hex(int colour, int alpha) {
-      return String.format("#%06X%02X", Integer.valueOf(colour & 0xFFFFFF), Integer.valueOf(alpha & 0xFF));
+      char[] out = new char[9];
+      out[0] = '#';
+      int rgb = colour & 0xFFFFFF;
+      for (int index = 0; index < 6; ++index) {
+         out[1 + index] = HEX_DIGITS[rgb >>> (20 - index * 4) & 0xF];
+      }
+      int a = alpha & 0xFF;
+      out[7] = HEX_DIGITS[a >>> 4 & 0xF];
+      out[8] = HEX_DIGITS[a & 0xF];
+      return new String(out);
    }
 
    private FentMaterial() {

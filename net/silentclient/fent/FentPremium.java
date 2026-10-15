@@ -10,14 +10,31 @@ import java.util.Properties;
 import net.silentclient.common.api.services.premium.BandanaConfig;
 import net.silentclient.common.api.services.premium.NametagConfig;
 
-// Local nametag and bandana store, kept next to the client's own config.json.
-// The server refuses both saves without real premium, so Fent writes them here.
 public final class FentPremium {
-   private static final Path FILE = Paths.get("silentclient", "fent.properties");
+   private static volatile Path file;
    private static Properties store;
    private static NametagConfig nametag;
    private static BandanaConfig bandana;
    private static boolean loaded;
+
+   private static Path file() {
+      Path resolved = file;
+      if (resolved == null) {
+         synchronized (FentPremium.class) {
+            resolved = file;
+            if (resolved == null) {
+               try {
+                  resolved = net.fabricmc.loader.api.FabricLoader.getInstance().getGameDir()
+                     .resolve("silentclient").resolve("fent.properties");
+               } catch (Throwable throwable) {
+                  resolved = Paths.get("silentclient", "fent.properties");
+               }
+               file = resolved;
+            }
+         }
+      }
+      return resolved;
+   }
 
    public static synchronized NametagConfig nametag() {
       if (!loaded) {
@@ -34,6 +51,9 @@ public final class FentPremium {
    }
 
    public static synchronized void saveNametag(NametagConfig config) {
+      if (config == null) {
+         return;
+      }
       if (!loaded) {
          load();
       }
@@ -47,6 +67,9 @@ public final class FentPremium {
    }
 
    public static synchronized void saveBandana(BandanaConfig config) {
+      if (config == null) {
+         return;
+      }
       if (!loaded) {
          load();
       }
@@ -60,11 +83,12 @@ public final class FentPremium {
    private static void load() {
       loaded = true;
       store = new Properties();
-      if (Files.isRegularFile(FILE)) {
-         try (InputStream input = Files.newInputStream(FILE)) {
+      Path path = file();
+      if (Files.isRegularFile(path)) {
+         try (InputStream input = Files.newInputStream(path)) {
             store.load(input);
          } catch (IOException exception) {
-            System.err.println("[Fent] could not read " + FILE + ": " + exception);
+            System.err.println("[Fent] could not read " + path + ": " + exception);
          }
       }
       if ("true".equals(store.getProperty("nametag.saved"))) {
@@ -84,16 +108,24 @@ public final class FentPremium {
    }
 
    private static void flush() {
+      Path path = file();
       try {
-         Path parent = FILE.getParent();
+         Path parent = path.getParent();
          if (parent != null) {
             Files.createDirectories(parent);
          }
-         try (OutputStream output = Files.newOutputStream(FILE)) {
+         Path tmp = path.resolveSibling(path.getFileName() + ".tmp");
+         try (OutputStream output = Files.newOutputStream(tmp)) {
             store.store(output, "Fent");
          }
+         try {
+            Files.move(tmp, path, java.nio.file.StandardCopyOption.ATOMIC_MOVE,
+               java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+         } catch (java.nio.file.AtomicMoveNotSupportedException atomic) {
+            Files.move(tmp, path, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+         }
       } catch (IOException exception) {
-         System.err.println("[Fent] could not write " + FILE + ": " + exception);
+         System.err.println("[Fent] could not write " + path + ": " + exception);
       }
    }
 

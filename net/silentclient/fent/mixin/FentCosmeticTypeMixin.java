@@ -5,7 +5,7 @@ import java.util.Map;
 import net.silentclient.common.api.services.cosmetics.Cosmetic;
 import net.silentclient.common.api.services.cosmetics.CosmeticType;
 import net.silentclient.fent.FentUnlocks;
-import net.silentclient.internal.ai.r;
+
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.Unique;
@@ -14,28 +14,61 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
-// Cosmetics live in net.silentclient.internal.ar.b.
-// b(Cosmetic) is the owned check the menu asks.
-// a(CosmeticType, String) is the equip action, the only caller is the menu.
-// b(type, id) records the pick, f(type, id) publishes it, the server call is skipped.
-// Picks are saved under setting.* so SilentClient writes them to config.json.
-@Mixin(targets = "net.silentclient.internal.ar.b")
+@Mixin(targets = "net.silentclient.internal.at.b")
 public abstract class FentCosmeticTypeMixin {
    @Unique
-   private static final String FENT_PREFIX = "setting.fent.selected.";
+   private static final String FENT_PREFIX = "fent.selected.";
 
    @Shadow
    public abstract boolean a(CosmeticType type);
 
    @Shadow
-   public abstract long b(CosmeticType type, String id);
+   public abstract String b(CosmeticType type);
 
    @Shadow
-   protected abstract void f(CosmeticType type, String id);
+   public abstract String d(CosmeticType type);
 
-   // Owned check: treat every catalog entry as owned.
+   @Shadow
+   public abstract Cosmetic c(CosmeticType type, String id);
+
+   @Shadow
+   public abstract long b(CosmeticType type, String id);
+
+   @Unique
+   private static volatile java.lang.reflect.Method FENT_PUBLISH;
+
+   @Unique
+   private void fent$publish(CosmeticType type, String id) {
+      try {
+         java.lang.reflect.Method publish = FENT_PUBLISH;
+         if (publish == null) {
+            publish = findPublish(Class.forName("net.silentclient.internal.at.b"));
+            if (publish != null) {
+               FENT_PUBLISH = publish;
+            } else {
+               throw new NoSuchMethodException("f(CosmeticType,String)");
+            }
+         }
+         publish.invoke(this, type, id);
+      } catch (Throwable throwable) {
+         throw new RuntimeException(throwable);
+      }
+   }
+
+   @Unique
+   private static java.lang.reflect.Method findPublish(Class<?> type) {
+      try {
+         java.lang.reflect.Method publish = type.getDeclaredMethod("f",
+            CosmeticType.class, String.class);
+         publish.setAccessible(true);
+         return publish;
+      } catch (Throwable ignored) {
+         return null;
+      }
+   }
+
    @Inject(
-      method = "b(Lnet/silentclient/common/api/services/cosmetics/Cosmetic;)Z",
+      method = "a(Lnet/silentclient/common/api/services/cosmetics/Cosmetic;)Z",
       at = @At("HEAD"),
       cancellable = true
    )
@@ -45,25 +78,49 @@ public abstract class FentCosmeticTypeMixin {
       }
    }
 
-   // Equip without the server round trip, which would answer 403 and revert.
    @Inject(
-      method = "a(Lnet/silentclient/common/api/services/cosmetics/CosmeticType;Ljava/lang/String;)V",
+      method = "a(Lnet/silentclient/common/api/services/cosmetics/CosmeticType;Ljava/lang/String;)Z",
       at = @At("HEAD"),
       cancellable = true
    )
-   private void fent$equipLocally(CosmeticType type, String id, CallbackInfo ci) {
+   private void fent$equipLocally(CosmeticType type, String id, CallbackInfoReturnable<Boolean> cir) {
       if (type == null || this.a(type) || !FentUnlocks.type(type)) {
-         // Client-owned types apply through am.e, leave that path alone.
          return;
       }
       String value = id == null ? "" : id;
-      this.b(type, value);
-      this.f(type, value);
+      if (!value.isEmpty()) {
+         try {
+            if (this.c(type, value) == null) {
+               return;
+            }
+         } catch (Throwable ignored) {
+         }
+      }
+      try {
+         try {
+            if (this.b(type) != null) {
+               net.silentclient.internal.an.o.a(type, "");
+            }
+         } catch (Throwable ignored) {
+         }
+         this.b(type, value);
+      } catch (Throwable throwable) {
+         System.err.println("[Fent] could not equip a cosmetic locally: " + throwable);
+         return;
+      }
+      try {
+         fent$publish(type, value);
+      } catch (Throwable throwable) {
+         System.err.println("[Fent] could not publish a local cosmetic pick: " + throwable);
+      }
       fent$save(type, value);
-      ci.cancel();
+      try {
+         net.silentclient.fent.FentShare.publishLocal();
+      } catch (Throwable ignored) {
+      }
+      cir.setReturnValue(Boolean.TRUE);
    }
 
-   // Server expiry table: an unlock does not expire, and it drives the temporary badge.
    @Inject(method = "a(Ljava/util/Map;)V", at = @At("HEAD"), cancellable = true)
    private void fent$ignoreExpiries(Map<String, Map<String, Long>> expiries, CallbackInfo ci) {
       if (FentUnlocks.cosmetics()) {
@@ -71,15 +128,23 @@ public abstract class FentCosmeticTypeMixin {
       }
    }
 
-   // Merge of server and outfit state, which drops local picks, so re-apply after it.
    @Inject(method = "a(Ljava/util/Map;J)V", at = @At("RETURN"))
    private void fent$reapplySaved(Map<CosmeticType, String> equipped, long generation, CallbackInfo ci) {
-      fent$applySaved();
+      try {
+         fent$applySaved();
+         fent$clearDisabledFakes();
+      } catch (Throwable throwable) {
+         System.err.println("[Fent] could not reapply cosmetic picks: " + throwable);
+      }
    }
 
    @Inject(method = "<init>", at = @At("RETURN"))
    private void fent$restoreSelections(CallbackInfo ci) {
-      fent$applySaved();
+      try {
+         fent$applySaved();
+      } catch (Throwable throwable) {
+         System.err.println("[Fent] could not restore cosmetic picks: " + throwable);
+      }
    }
 
    @Unique
@@ -88,21 +153,93 @@ public abstract class FentCosmeticTypeMixin {
          return;
       }
       for (CosmeticType type : CosmeticType.values()) {
-         if (this.a(type) || !FentUnlocks.type(type)) {
+         if (type == null || this.a(type) || !FentUnlocks.type(type)) {
             continue;
          }
-         String saved = r.d(fent$key(type));
-         if (saved.isEmpty()) {
+         String saved;
+         try {
+            saved = FentUnlocks.string(fent$key(type));
+         } catch (Throwable ignored) {
             continue;
          }
-         this.b(type, saved);
+         if (saved == null || saved.isEmpty()) {
+            continue;
+         }
+         try {
+            if (this.c(type, saved) == null) {
+               continue;
+            }
+            String current = this.d(type);
+            if (saved.equals(current)) {
+               continue;
+            }
+            if (this.b(type) != null) {
+               try {
+                  net.silentclient.internal.an.o.a(type, "");
+               } catch (Throwable ignored) {
+               }
+            }
+            this.b(type, saved);
+         } catch (Throwable throwable) {
+            System.err.println("[Fent] could not reapply a cosmetic pick: " + throwable);
+            continue;
+         }
+         try {
+            fent$publish(type, saved);
+         } catch (Throwable throwable) {
+            System.err.println("[Fent] could not publish a cosmetic pick: " + throwable);
+         }
       }
    }
 
-   // Unequip forgets the pick.
+   @Unique
+   private void fent$clearDisabledFakes() {
+      boolean master;
+      try {
+         master = FentUnlocks.cosmetics();
+      } catch (Throwable ignored) {
+         return;
+      }
+      for (CosmeticType type : CosmeticType.values()) {
+         if (type == null || this.a(type)) {
+            continue;
+         }
+         boolean enabled;
+         try {
+            enabled = master && FentUnlocks.type(type);
+         } catch (Throwable ignored) {
+            continue;
+         }
+         if (enabled) {
+            continue;
+         }
+         String saved;
+         try {
+            saved = FentUnlocks.string(fent$key(type));
+         } catch (Throwable ignored) {
+            continue;
+         }
+         if (saved == null || saved.isEmpty()) {
+            continue;
+         }
+         try {
+            String current = this.d(type);
+            if (!saved.equals(current)) {
+               continue;
+            }
+            this.b(type, "");
+            try {
+               fent$publish(type, "");
+            } catch (Throwable ignored) {
+            }
+         } catch (Throwable ignored) {
+         }
+      }
+   }
+
    @Unique
    private static void fent$save(CosmeticType type, String id) {
-      r.a(fent$key(type), id.isEmpty() ? null : id);
+      FentUnlocks.setString(fent$key(type), id.isEmpty() ? "" : id);
    }
 
    @Unique

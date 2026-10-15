@@ -6,15 +6,6 @@ import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Redirect;
 
-// Keystrokes draws its own keys: every key box is a rounded or square rectangle painted straight onto
-// the bridge, with the module's own background colour, and the widget has no plate of its own. It is
-// therefore one of the modules the shared HUD painter never reaches, and it used to stay flat while
-// the rest of the HUD was glass.
-//
-// The key box painter is the one method all of those rectangles go through, and it has exactly two
-// shapes - rounded and square - so both call sites are taken over and handed to the tile material: a
-// softer plate, the gradient, and the hairline. Nothing about the keys, their layout, their click
-// handling or their text changes; only how the box behind each one is filled.
 @Mixin(targets = "net.silentclient.internal.V.t")
 public abstract class FentKeysMixin {
    @Redirect(
