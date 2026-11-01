@@ -2,6 +2,7 @@ package net.silentclient.fent;
 
 import java.util.Map;
 import net.silentclient.common.api.bridge.RenderBridge;
+import net.silentclient.internal.L.e;
 import net.silentclient.internal.ac.d;
 
 public final class FentGlass {
@@ -19,6 +20,8 @@ public final class FentGlass {
    };
    private static final String[] SURFACE_KEYS = new String[] {"gradient-from", "gradient-to", "gradient-angle"};
    private static final String[] TEXT_KEYS = new String[] {"color"};
+   private static final String[] ICON_TINT_KEYS = new String[] {"icon-tint", "active-icon-tint", "hover-icon-tint"};
+   private static final String MENU_ICON_TINT = "#AAB7C8FF";
 
    private static final float WHITE_SATURATION = 0.25f;
    private static final String WHITE_TEXT = "#FFFFFFFF";
@@ -182,6 +185,43 @@ public final class FentGlass {
 
    public static String[] textKeys() {
       return TEXT_KEYS;
+   }
+
+   public static String[] iconTintKeys() {
+      return ICON_TINT_KEYS;
+   }
+
+   public static void tintMainMenuIcon(d node, String[] saved) {
+      if (node == null || node.d == null || saved == null) {
+         return;
+      }
+      save(node, ICON_TINT_KEYS, saved);
+      for (String key : ICON_TINT_KEYS) {
+         node.d.put(key, MENU_ICON_TINT);
+      }
+   }
+
+   public static boolean isMainMenu(e element) {
+      e root = element;
+      while (root != null && root.b != null) {
+         root = root.b;
+      }
+      return containsMainMenuAnchor(root);
+   }
+
+   private static boolean containsMainMenuAnchor(e element) {
+      if (element == null) {
+         return false;
+      }
+      if ("main-menu-logo-anchor".equals(element.a("id", ""))) {
+         return true;
+      }
+      for (e child : element.a) {
+         if (containsMainMenuAnchor(child)) {
+            return true;
+         }
+      }
+      return false;
    }
 
    public static int whiteForToken(String token, int colour) {

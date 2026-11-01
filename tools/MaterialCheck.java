@@ -6,6 +6,7 @@ import java.nio.ByteBuffer;
 import net.silentclient.fent.FentGlass;
 import net.silentclient.fent.FentMaterial;
 import net.silentclient.fent.FentRefraction;
+import net.silentclient.internal.L.e;
 import net.silentclient.internal.ac.d;
 
 public final class MaterialCheck {
@@ -44,6 +45,7 @@ public final class MaterialCheck {
       paneFill();
       paneMarking();
       surfaceGradient();
+      mainMenuIconTint();
       plateAlpha();
       textGrey();
       blackRefractionReadback();
@@ -114,6 +116,34 @@ public final class MaterialCheck {
       check("the backdrop plate is lighter than a plain one", FentMaterial.BACKDROP_PLATE_ALPHA < FentMaterial.PLATE_ALPHA);
       check("the tile plate is lighter than a plain one", FentMaterial.TILE_ALPHA < FentMaterial.PLATE_ALPHA);
       check("the tile floor is below the plate floor", FentMaterial.TILE_FLOOR < FentMaterial.PLATE_FLOOR);
+   }
+
+   private static void mainMenuIconTint() {
+      e menu = new e("menu");
+      e row = new e("hstack");
+      e menuIcon = new e("icon-button");
+      e anchor = new e("panel");
+      anchor.d.put("id", "main-menu-logo-anchor");
+      menu.a(row);
+      row.a(menuIcon);
+      menu.a(anchor);
+      check("main-menu tree is recognized", FentGlass.isMainMenu(menuIcon));
+
+      e pauseMenu = new e("menu");
+      e pauseIcon = new e("icon-button");
+      pauseMenu.a(pauseIcon);
+      check("other menu tree is excluded", !FentGlass.isMainMenu(pauseIcon));
+
+      d icon = node("icon-button", 16.0f, 16.0f, "icon-tint", "#FFFFFFFF",
+         "hover-icon-tint", "#EEEEEEFF");
+      String[] saved = new String[FentGlass.iconTintKeys().length];
+      FentGlass.tintMainMenuIcon(icon, saved);
+      check("main-menu icon tint is grey", "#AAB7C8FF".equals(icon.d.get("icon-tint")));
+      check("hovered icon tint is grey", "#AAB7C8FF".equals(icon.d.get("hover-icon-tint")));
+      check("active icon tint is grey", "#AAB7C8FF".equals(icon.d.get("active-icon-tint")));
+      FentGlass.restore(icon, saved, FentGlass.iconTintKeys());
+      check("original icon tint is restored", "#FFFFFFFF".equals(icon.d.get("icon-tint")));
+      check("missing icon tint remains missing", !icon.d.containsKey("active-icon-tint"));
    }
 
    private static void textGrey() {

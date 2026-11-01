@@ -4,7 +4,7 @@ Community addon for SilentClient (client side, 1.21.11) by [Zouhmi](https://zouh
 
 ## Features
 
-- **Liquid Glass theme**: frosted windows and widgets with GPU backdrop blur, grey menu text.
+- **Liquid Glass theme**: frosted windows and widgets with GPU backdrop blur, grey main-menu text and icons.
 - **Glass HUD**: Keystrokes, Mouse Strokes and Dynamic Widget island, plus a glass music player.
 - **Dynamic Widget extras**: Date, Day, Biome, Players, Track, Artist, Song Time, Current Lyric, Lyrics Offset.
 - **Unlocks**: cosmetics, emotes, themes, Premium (local only).
