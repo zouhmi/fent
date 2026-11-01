@@ -12,7 +12,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 import net.silentclient.fent.FentUnlocks;
 
-@Mixin(targets = "net.silentclient.internal.at.c")
+@Mixin(targets = "net.silentclient.internal.aw.e")
 public abstract class FentEmotesMixin {
    @Shadow
    private volatile List<Emote> j;

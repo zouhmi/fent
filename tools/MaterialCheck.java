@@ -1,10 +1,12 @@
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.nio.ByteBuffer;
 
 import net.silentclient.fent.FentGlass;
 import net.silentclient.fent.FentMaterial;
-import net.silentclient.internal.K.f;
+import net.silentclient.fent.FentRefraction;
+import net.silentclient.internal.ac.d;
 
 public final class MaterialCheck {
    private static final float SCREEN_WIDTH = 1920.0f;
@@ -43,7 +45,8 @@ public final class MaterialCheck {
       paneMarking();
       surfaceGradient();
       plateAlpha();
-      textWhite();
+      textGrey();
+      blackRefractionReadback();
 
       if (!failures.isEmpty()) {
          for (String failure : failures) {
@@ -65,39 +68,39 @@ public final class MaterialCheck {
    }
 
     private static void paneMarking() {
-      f node = node("panel", 420.0f, 300.0f, "class", "window", "bg", "#CC14161B", "border", "#22FFFFFF", "rounded", "6");
+      d node = node("panel", 420.0f, 300.0f, "class", "window", "bg", "#CC14161B", "border", "#22FFFFFF", "rounded", "6");
       String[] saved = FentGlass.markPane(node);
-      check("glass is set", "true".equals(node.b.get("glass")));
-      check("fill is the material's", FentMaterial.PANE_FILL == alphaIn(node.b.get("glass-tint")));
-      check("hover fill is the material's", FentMaterial.PANE_FILL_HOVER == alphaIn(node.b.get("hover-glass-tint")));
-      check("sheen is the material's", Float.toString(FentMaterial.PANE_SHEEN).equals(node.b.get("glass-highlight")));
-      check("rim is one unit", "1".equals(node.b.get("border-width")));
-      check("the theme's own border is replaced", !"#22FFFFFF".equals(node.b.get("border")));
+      check("glass is set", "true".equals(node.d.get("glass")));
+      check("fill is the material's", FentMaterial.PANE_FILL == alphaIn(node.d.get("glass-tint")));
+      check("hover fill is the material's", FentMaterial.PANE_FILL_HOVER == alphaIn(node.d.get("hover-glass-tint")));
+      check("sheen is the material's", Float.toString(FentMaterial.PANE_SHEEN).equals(node.d.get("glass-highlight")));
+      check("rim is one unit", "1".equals(node.d.get("border-width")));
+      check("the theme's own border is replaced", !"#22FFFFFF".equals(node.d.get("border")));
       FentGlass.restore(node, saved, FentGlass.paneKeys());
-      check("glass is taken back off", !node.b.containsKey("glass"));
-      check("fill is taken back off", !node.b.containsKey("glass-tint"));
-      check("hover fill is taken back off", !node.b.containsKey("hover-glass-tint"));
-      check("the theme's own border is put back", "#22FFFFFF".equals(node.b.get("border")));
+      check("glass is taken back off", !node.d.containsKey("glass"));
+      check("fill is taken back off", !node.d.containsKey("glass-tint"));
+      check("hover fill is taken back off", !node.d.containsKey("hover-glass-tint"));
+      check("the theme's own border is put back", "#22FFFFFF".equals(node.d.get("border")));
    }
 
     private static void surfaceGradient() {
-      f node = node("panel", 117.0f, 17.0f, "bg", "#FF1A1A1A", "hover-bg", "#FF262626", "rounded", "3");
+      d node = node("panel", 117.0f, 17.0f, "bg", "#FF1A1A1A", "hover-bg", "#FF262626", "rounded", "3");
       String[] saved = FentGlass.surface(node, false);
-      check("a surface is graded", saved != null && node.b.containsKey("gradient-from") && node.b.containsKey("gradient-to"));
-      check("the gradient is vertical", Float.toString(FentMaterial.SURFACE_ANGLE).equals(node.b.get("gradient-angle")));
-      int from = rgbIn(node.b.get("gradient-from"));
-      int to = rgbIn(node.b.get("gradient-to"));
+      check("a surface is graded", saved != null && node.d.containsKey("gradient-from") && node.d.containsKey("gradient-to"));
+      check("the gradient is vertical", Float.toString(FentMaterial.SURFACE_ANGLE).equals(node.d.get("gradient-angle")));
+      int from = rgbIn(node.d.get("gradient-from"));
+      int to = rgbIn(node.d.get("gradient-to"));
       check("the two stops differ", from != to);
       int surfaceAlpha = 0xFF;
-      check("the top stop adds no opacity", alphaIn(node.b.get("gradient-from")) <= surfaceAlpha);
-      check("the bottom stop adds no opacity", alphaIn(node.b.get("gradient-to")) <= surfaceAlpha);
-      check("the gradient runs downhill", alphaIn(node.b.get("gradient-to")) <= alphaIn(node.b.get("gradient-from")));
+      check("the top stop adds no opacity", alphaIn(node.d.get("gradient-from")) <= surfaceAlpha);
+      check("the bottom stop adds no opacity", alphaIn(node.d.get("gradient-to")) <= surfaceAlpha);
+      check("the gradient runs downhill", alphaIn(node.d.get("gradient-to")) <= alphaIn(node.d.get("gradient-from")));
       FentGlass.restore(node, saved, FentGlass.surfaceKeys());
-      check("the gradient is taken back off", !node.b.containsKey("gradient-from"));
+      check("the gradient is taken back off", !node.d.containsKey("gradient-from"));
 
-      f hovered = node("panel", 117.0f, 17.0f, "bg", "#FF1A1A1A", "hover-bg", "#FF262626", "rounded", "3");
+      d hovered = node("panel", 117.0f, 17.0f, "bg", "#FF1A1A1A", "hover-bg", "#FF262626", "rounded", "3");
       FentGlass.surface(hovered, true);
-      check("hover grades from the hover colour", rgbIn(hovered.b.get("gradient-from")) != from);
+      check("hover grades from the hover colour", rgbIn(hovered.d.get("gradient-from")) != from);
    }
 
     private static void plateAlpha() {
@@ -113,7 +116,7 @@ public final class MaterialCheck {
       check("the tile floor is below the plate floor", FentMaterial.TILE_FLOOR < FentMaterial.PLATE_FLOOR);
    }
 
-    private static void textWhite() {
+   private static void textGrey() {
       check("plain grey goes white", FentGlass.whiteFor(0xFF8A8F98) == 0xFFFFFFFF);
       check("dim white goes white", FentGlass.whiteFor(0x66FFFFFF) == 0xFFFFFFFF);
       check("pure white is left alone", FentGlass.whiteFor(0xFFFFFFFF) == 0);
@@ -127,17 +130,22 @@ public final class MaterialCheck {
       check("accent token is left alone", FentGlass.whiteForToken("accent", 0xFF8A8F98) == 0);
       check("textOnAccent is left alone", FentGlass.whiteForToken("textOnAccent", 0xFF8A8F98) == 0);
       check("null token is left alone", FentGlass.whiteForToken(null, 0xFF8A8F98) == 0);
-      f grey = node("text", 120.0f, 10.0f, "color", "#8A8F98FF");
-      check("a grey label is whitened", FentGlass.whiten(grey) != null && "#FFFFFFFF".equals(grey.b.get("color")));
-      FentGlass.restore(grey, new String[] {"#8A8F98FF"}, FentGlass.textKeys());
-      check("the label colour is put back", "#8A8F98FF".equals(grey.b.get("color")));
-      f blue = node("text", 120.0f, 10.0f, "color", "#4C9FFFFF");
-      check("a blue label is left alone", FentGlass.whiten(blue) == null && "#4C9FFFFF".equals(blue.b.get("color")));
-      f plain = node("panel", 200.0f, 40.0f, "bg", "#FF1A1A1A", "rounded", "4");
+      d grey = node("text", 120.0f, 10.0f, "color", "#8A8F98FF");
+      check("a grey label stays grey", FentGlass.whiten(grey) == null && "#8A8F98FF".equals(grey.d.get("color")));
+      d blue = node("text", 120.0f, 10.0f, "color", "#4C9FFFFF");
+      check("a blue label is left alone", FentGlass.whiten(blue) == null && "#4C9FFFFF".equals(blue.d.get("color")));
+      d plain = node("panel", 200.0f, 40.0f, "bg", "#FF1A1A1A", "rounded", "4");
       check("panels are not whitened", FentGlass.whiten(plain) == null);
     }
 
-   private static void expect(String what, f node, boolean hover, int wanted) {
+   private static void blackRefractionReadback() {
+      ByteBuffer pixels = ByteBuffer.allocate(4);
+      int[] argb = new int[1];
+      check("black framebuffer readback is valid", FentRefraction.toArgb(pixels, argb, 1, 1));
+      check("black framebuffer pixel is preserved", argb[0] == 0x00000000);
+   }
+
+   private static void expect(String what, d node, boolean hover, int wanted) {
       ++total;
       int kind = FentGlass.kind(node, hover, SCREEN_WIDTH, SCREEN_HEIGHT);
       if (kind != wanted) {
@@ -156,13 +164,13 @@ public final class MaterialCheck {
       return kind == FentGlass.PANE ? "a pane" : (kind == FentGlass.SURFACE ? "a surface" : "not material");
    }
 
-   private static f node(String type, float width, float height, String... attributes) {
-      f node = new f(type);
+   private static d node(String type, float width, float height, String... attributes) {
+      d node = new d(type);
       node.f = 40.0f;
       node.g = 40.0f;
       node.h = width;
       node.i = height;
-      Map<String, String> map = node.b;
+      Map<String, String> map = node.d;
       for (int index = 0; index + 1 < attributes.length; index += 2) {
          map.put(attributes[index], attributes[index + 1]);
       }

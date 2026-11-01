@@ -6,75 +6,8 @@ import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Redirect;
 
-@Mixin(targets = "net.silentclient.internal.V.i")
+@Mixin(targets = "net.silentclient.internal.W.i")
 public abstract class FentIslandMixin {
-   @Redirect(
-      method = "onRender(Lnet/silentclient/common/api/context/ModContext;)V",
-      at = @At(
-         value = "INVOKE",
-         target = "Lnet/silentclient/common/api/bridge/RenderBridge;drawRoundedRect(FFFFFI)V",
-         ordinal = 0
-      ),
-      require = 1
-   )
-   private void fent$islandPlate(RenderBridge renderBridge, float x, float y, float w, float h, float radius, int color) {
-      FentGlass.plate(renderBridge, x, y, w, h, radius, radius, radius, radius, color);
-   }
-
-   @Redirect(
-      method = "onRender(Lnet/silentclient/common/api/context/ModContext;)V",
-      at = @At(
-         value = "INVOKE",
-         target = "Lnet/silentclient/common/api/bridge/RenderBridge;drawRoundedRectCorners(FFFFFFFFI)V",
-         ordinal = 0
-      ),
-      require = 1
-   )
-   private void fent$islandPlateNotch(RenderBridge renderBridge, float x, float y, float w, float h,
-                                      float r0, float r1, float r2, float r3, int color) {
-      FentGlass.plate(renderBridge, x, y, w, h, r0, r1, r2, r3, color);
-   }
-
-   @Redirect(
-      method = "onRender(Lnet/silentclient/common/api/context/ModContext;)V",
-      at = @At(
-         value = "INVOKE",
-         target = "Lnet/silentclient/common/api/bridge/RenderBridge;drawRoundedRect(FFFFFI)V",
-         ordinal = 1
-      ),
-      require = 0
-   )
-   private void fent$islandBar(RenderBridge renderBridge, float x, float y, float w, float h, float radius, int color) {
-      FentGlass.bar(renderBridge, x, y, w, h, radius, color);
-   }
-
-   @Redirect(
-      method = "onRender(Lnet/silentclient/common/api/context/ModContext;)V",
-      at = @At(
-         value = "INVOKE",
-         target = "Lnet/silentclient/common/api/bridge/RenderBridge;drawRoundedRect(FFFFFI)V",
-         ordinal = 2
-      ),
-      require = 0
-   )
-   private void fent$islandProgress(RenderBridge renderBridge, float x, float y, float w, float h, float radius, int color) {
-      FentGlass.bar(renderBridge, x, y, w, h, radius, color);
-   }
-
-   @Redirect(
-      method = "onRender(Lnet/silentclient/common/api/context/ModContext;)V",
-      at = @At(
-         value = "INVOKE",
-         target = "Lnet/silentclient/common/api/bridge/RenderBridge;drawRoundedRectCorners(FFFFFFFFI)V",
-         ordinal = 1
-      ),
-      require = 0
-   )
-   private void fent$islandProgressFill(RenderBridge renderBridge, float x, float y, float w, float h,
-                                        float r0, float r1, float r2, float r3, int color) {
-      FentGlass.bar(renderBridge, x, y, w, h, r0, r1, r2, r3, color);
-   }
-
    @Redirect(
       method = "a(Lnet/silentclient/common/api/bridge/RenderBridge;FFFFFFLjava/lang/String;Ljava/lang/String;)V",
       at = @At(

@@ -7,6 +7,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Base64;
+import java.util.Collections;
 import java.util.EnumMap;
 import java.util.Locale;
 import java.util.Map;
@@ -125,18 +126,16 @@ public final class FentShare {
          return null;
       }
       prune();
-      Remote direct = REMOTES.get(playerId);
-      if (direct == null) {
-         for (Map.Entry<String, Remote> entry : REMOTES.entrySet()) {
-            if (entry.getKey().equalsIgnoreCase(playerId)) {
-               direct = entry.getValue();
-               break;
-            }
-         }
-      }
+      String key = playerId.toLowerCase(Locale.ROOT);
+      Remote direct = REMOTES.get(key);
       if (direct == null) {
          Map<CosmeticType, String> fromFile = loadPeerFile(playerId);
-         return fromFile == null || fromFile.isEmpty() ? null : fromFile;
+         if (fromFile == null || fromFile.isEmpty()) {
+            putRemote(key, Collections.<CosmeticType, String>emptyMap());
+            return null;
+         }
+         putRemote(key, fromFile);
+         return new EnumMap<CosmeticType, String>(fromFile);
       }
       return direct.items.isEmpty() ? null : new EnumMap<CosmeticType, String>(direct.items);
    }
@@ -178,7 +177,7 @@ public final class FentShare {
    }
 
    private static void putRemote(String playerId, Map<CosmeticType, String> items) {
-      REMOTES.put(playerId, new Remote(new EnumMap<CosmeticType, String>(items), System.nanoTime()));
+      REMOTES.put(playerId.toLowerCase(Locale.ROOT), new Remote(new EnumMap<CosmeticType, String>(items), System.nanoTime()));
       if (REMOTES.size() > 128) {
          prune();
       }
@@ -236,13 +235,6 @@ public final class FentShare {
    }
 
    private static String localId() {
-      try {
-         String uuid = net.silentclient.internal.an.v.a();
-         if (uuid != null && !uuid.isEmpty()) {
-            return sanitize(uuid);
-         }
-      } catch (Throwable ignored) {
-      }
       try {
          String name = net.fabricmc.loader.api.FabricLoader.getInstance().getGameDir().toString();
          return "me";

@@ -9,8 +9,8 @@ import java.util.Map;
 public final class FentAero {
    public static final String ID = "liquidglass";
    private static final String NAME = "Liquid Glass";
-private static final String THEMES_CLASS = "net.silentclient.internal.ax.a";
-private static final String THEME_CLASS = "net.silentclient.internal.ax.a$a";
+private static final String THEMES_CLASS = "net.silentclient.internal.aA.a";
+private static final String THEME_CLASS = "net.silentclient.internal.aA.a$a";
    private static final String DARK_TEMPLATE = "midnight";
    private static final String LIGHT_TEMPLATE = "porcelain";
    private static final int FALLBACK_BASE = 0x14161B;
@@ -81,7 +81,7 @@ private static final String THEME_CLASS = "net.silentclient.internal.ax.a$a";
 
    public static boolean active() {
       try {
-         return ID.equals(net.silentclient.internal.ax.a.i());
+         return ID.equals(net.silentclient.internal.aA.a.i());
       } catch (Throwable throwable) {
          return false;
       }

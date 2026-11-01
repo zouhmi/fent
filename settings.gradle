@@ -1,0 +1,19 @@
+pluginManagement {
+    repositories {
+        mavenCentral()
+        maven { url 'https://maven.fabricmc.net/' }
+        gradlePluginPortal()
+    }
+    plugins {
+        id 'fabric-loom' version '1.6-SNAPSHOT'
+    }
+}
+
+dependencyResolutionManagement {
+    repositories {
+        mavenCentral()
+        maven { url 'https://maven.fabricmc.net/' }
+    }
+}
+
+rootProject.name = 'fent'

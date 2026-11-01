@@ -258,7 +258,6 @@ public final class FentRefraction {
       }
       byte[] raw = byteScratch = ensureB(byteScratch, size);
       bytes.get(raw, 0, size);
-      boolean any = false;
       for (int row = 0; row < rows; ++row) {
          int target = (height - 1 - row) * width;
          int from = row * width * 4;
@@ -268,13 +267,10 @@ public final class FentRefraction {
             int green = raw[at + 1] & 0xFF;
             int blue = raw[at + 2] & 0xFF;
             int alpha = raw[at + 3] & 0xFF;
-            if (red != 0 || green != 0 || blue != 0) {
-               any = true;
-            }
             out[target + column] = alpha << 24 | red << 16 | green << 8 | blue;
          }
       }
-      return any;
+      return true;
    }
 
    public static void boxDownscale(int[] src, int sw, int sh, int dw, int dh, int[] out) {

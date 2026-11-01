@@ -7,7 +7,7 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-@Mixin(targets = "net.silentclient.internal.aj.p")
+@Mixin(targets = "net.silentclient.internal.am.q")
 public abstract class FentColorPickerMixin {
    @Inject(
       method = "b(Lnet/silentclient/common/api/context/ModContext;Ljava/lang/String;Ljava/lang/String;)V",

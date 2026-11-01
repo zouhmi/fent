@@ -71,13 +71,6 @@ public final class FentUnlocks {
    }
 
    private static String value(String key) {
-      try {
-         String live = net.silentclient.internal.aj.t.d(key);
-         if (live != null) {
-            return live;
-         }
-      } catch (Throwable ignored) {
-      }
       return fileValue(key);
    }
 
@@ -96,17 +89,6 @@ public final class FentUnlocks {
 
    public static synchronized void setString(String key, String value) {
       String stored = value == null ? "" : value;
-      boolean throughStore = false;
-      try {
-         net.silentclient.internal.aj.t.a(key, stored);
-         throughStore = true;
-      } catch (Throwable ignored) {
-      }
-      if (throughStore) {
-         cached = null;
-         lastProbeNanos = 0L;
-         return;
-      }
       try {
          Path path = configPath();
          JsonObject root = readConfig();

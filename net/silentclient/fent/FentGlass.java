@@ -2,7 +2,7 @@ package net.silentclient.fent;
 
 import java.util.Map;
 import net.silentclient.common.api.bridge.RenderBridge;
-import net.silentclient.internal.K.f;
+import net.silentclient.internal.ac.d;
 
 public final class FentGlass {
    public static final int NONE = 0;
@@ -27,11 +27,11 @@ public final class FentGlass {
    private static final String SURFACE_ANGLE_TEXT = Float.toString(FentMaterial.SURFACE_ANGLE);
    private static final String PANE_SHEEN_TEXT = Float.toString(FentMaterial.PANE_SHEEN);
 
-   public static int kind(f node, boolean hover, float screenWidth, float screenHeight) {
-      if (node == null || node.b == null) {
+   public static int kind(d node, boolean hover, float screenWidth, float screenHeight) {
+      if (node == null || node.d == null) {
          return NONE;
       }
-      Map<String, String> attributes = node.b;
+      Map<String, String> attributes = node.d;
       if (attributes.containsKey("glass")
          || attributes.containsKey("gradient-from")
          || attributes.containsKey("glow-color")
@@ -54,58 +54,65 @@ public final class FentGlass {
       return node.h >= MIN_SURFACE && node.i >= MIN_SURFACE ? SURFACE : NONE;
    }
 
-   private static boolean isPane(f node, float screenWidth, float screenHeight) {
-      if (node == null || node.b == null) {
+   private static boolean isPane(d node, float screenWidth, float screenHeight) {
+      if (node == null || node.d == null) {
          return false;
       }
-      String classes = node.b.get("class");
+      String classes = node.d.get("class");
       if (classes != null && (classes.contains("window") || classes.contains("dialog"))) {
          return radius(node) >= MIN_PANE_RADIUS;
       }
       return false;
    }
 
-   private static int fill(f node, boolean hover) {
-      if (node == null || node.b == null) {
+   private static int fill(d node, boolean hover) {
+      if (node == null || node.d == null) {
          return 0;
       }
-      if (hover && node.b.containsKey("hover-bg")) {
+      if (hover && node.d.containsKey("hover-bg")) {
          return node.b("hover-bg", 0);
       }
       return node.b("bg", 0);
    }
 
-   public static String[] markPane(f node) {
-      if (node == null || node.b == null) {
-         return new String[0];
+   public static String[] markPane(d node) {
+      String[] saved = new String[PANE_KEYS.length];
+      return markPane(node, saved) == null ? new String[0] : saved;
+   }
+
+   public static String[] markPane(d node, String[] saved) {
+      if (node == null || node.d == null) {
+         return null;
       }
       int accent = FentAero.accent();
-      String[] saved = save(node, PANE_KEYS);
-      node.b.put("glass", "true");
-      node.b.put("glass-tint", FentMaterial.hex(FentAero.base(), FentMaterial.PANE_FILL));
-      node.b.put("hover-glass-tint", FentMaterial.hex(FentAero.base(), FentMaterial.PANE_FILL_HOVER));
-      node.b.put("glass-highlight", PANE_SHEEN_TEXT);
-      node.b.put("border-width", Integer.toString(RIM_WIDTH));
-      node.b.put("border", FentMaterial.hex(FentMaterial.mix(0xFFFFFF, accent, 0.18f), FentMaterial.PANE_RIM));
-      node.b.put("glass-border-bottom", FentMaterial.hex(0x000000, FentMaterial.PANE_RIM_BOTTOM));
+      save(node, PANE_KEYS, saved);
+      node.d.put("glass", "true");
+      node.d.put("glass-tint", FentMaterial.hex(FentAero.base(), FentMaterial.PANE_FILL));
+      node.d.put("hover-glass-tint", FentMaterial.hex(FentAero.base(), FentMaterial.PANE_FILL_HOVER));
+      node.d.put("glass-highlight", PANE_SHEEN_TEXT);
+      node.d.put("border-width", Integer.toString(RIM_WIDTH));
+      node.d.put("border", FentMaterial.hex(FentMaterial.mix(0xFFFFFF, accent, 0.18f), FentMaterial.PANE_RIM));
+      node.d.put("glass-border-bottom", FentMaterial.hex(0x000000, FentMaterial.PANE_RIM_BOTTOM));
       return saved;
    }
 
-   public static void paneGradient(RenderBridge bridge, f node) {
+   public static void paneGradient(RenderBridge bridge, d node) {
       if (bridge == null || node == null || node.h < 1.0f || node.i < 1.0f) {
          return;
       }
       int base = FentAero.base();
       int accent = FentAero.accent();
-      float[] r = corners(node);
+      float all = node.c("rounded", 0.0f);
       gradient(
-         bridge, node.f, node.g, node.h, node.i, r[0], r[1], r[2], r[3],
+         bridge, node.f, node.g, node.h, node.i,
+         node.c("rounded-tl", all), node.c("rounded-tr", all),
+         node.c("rounded-br", all), node.c("rounded-bl", all),
          FentMaterial.argb(FentMaterial.PANE_GRADIENT_TOP, FentMaterial.lighten(base, 0.22f)),
          FentMaterial.argb(FentMaterial.PANE_GRADIENT_BOTTOM, accent)
       );
    }
 
-   public static void paneShadow(RenderBridge bridge, f node) {
+   public static void paneShadow(RenderBridge bridge, d node) {
       if (bridge == null || node == null) {
          return;
       }
@@ -120,21 +127,25 @@ public final class FentGlass {
       );
    }
 
-   public static void restore(f node, String[] saved, String[] keys) {
-      if (node == null || node.b == null || saved == null || keys == null) {
+   public static void restore(d node, String[] saved, String[] keys) {
+      if (node == null || node.d == null || saved == null || keys == null) {
          return;
       }
       for (int index = 0; index < keys.length && index < saved.length; ++index) {
          if (saved[index] == null) {
-            node.b.remove(keys[index]);
+            node.d.remove(keys[index]);
          } else {
-            node.b.put(keys[index], saved[index]);
+            node.d.put(keys[index], saved[index]);
          }
       }
    }
 
-   public static String[] surface(f node, boolean hover) {
-      if (node == null || node.b == null) {
+   public static String[] surface(d node, boolean hover) {
+      return surface(node, hover, new String[SURFACE_KEYS.length]);
+   }
+
+   public static String[] surface(d node, boolean hover, String[] saved) {
+      if (node == null || node.d == null) {
          return null;
       }
       int accent = FentAero.accent();
@@ -154,10 +165,10 @@ public final class FentGlass {
       if (bottomAlpha > 255) {
          bottomAlpha = 255;
       }
-      String[] saved = save(node, SURFACE_KEYS);
-      node.b.put("gradient-from", FentMaterial.hex(topRgb, topAlpha));
-      node.b.put("gradient-to", FentMaterial.hex(bottomRgb, bottomAlpha));
-      node.b.put("gradient-angle", SURFACE_ANGLE_TEXT);
+      save(node, SURFACE_KEYS, saved);
+      node.d.put("gradient-from", FentMaterial.hex(topRgb, topAlpha));
+      node.d.put("gradient-to", FentMaterial.hex(bottomRgb, bottomAlpha));
+      node.d.put("gradient-angle", SURFACE_ANGLE_TEXT);
       return saved;
    }
 
@@ -199,36 +210,17 @@ public final class FentGlass {
       return 0xFFFFFFFF;
    }
 
-   public static String[] whiten(f node) {
-      if (node == null || node.b == null || !"text".equals(node.a)) {
-         return null;
-      }
-      if (!node.b.containsKey("color")) {
-         return null;
-      }
-      int colour;
-      try {
-         colour = node.b("color", 0xFFFFFFFF);
-      } catch (Throwable throwable) {
-         return null;
-      }
-      if (whiteFor(colour) == 0) {
-         return null;
-      }
-      String[] saved = save(node, TEXT_KEYS);
-      node.b.put("color", WHITE_TEXT);
-      return saved;
+   public static String[] whiten(d node) {
+      return null;
    }
 
-   private static String[] save(f node, String[] keys) {
-      String[] saved = new String[keys.length];
-      if (node == null || node.b == null) {
-         return saved;
+   private static void save(d node, String[] keys, String[] saved) {
+      if (node == null || node.d == null) {
+         return;
       }
       for (int index = 0; index < keys.length; ++index) {
-         saved[index] = node.b.get(keys[index]);
+         saved[index] = node.d.get(keys[index]);
       }
-      return saved;
    }
 
    public static void plate(RenderBridge bridge, float x, float y, float w, float h,
@@ -377,35 +369,18 @@ public final class FentGlass {
       if ((rim >>> 24 & 0xFF) == 0) {
          return;
       }
-      try {
-         net.silentclient.internal.x.e.a(
-            bridge, x, y, w, h, r0, r1, r2, r3,
-            0, RIM_WIDTH, rim, rim, FentMaterial.PLATE_SHEEN * amount
-         );
-      } catch (Throwable throwable) {
-      }
+      float radius = (r0 + r1 + r2 + r3) / 4.0f;
+      bridge.drawOutline(x, y, w, h, radius, RIM_WIDTH, rim);
    }
 
    private static void sheen(RenderBridge bridge, float x, float y, float w, float h,
                              float r0, float r1, float r2, float r3, int colour) {
-      if (bridge == null || w < 1.0f || h < 1.0f) {
-         return;
-      }
-      try {
-         net.silentclient.internal.x.e.a(
-            bridge, x, y, w, h, r0, r1, r2, r3,
-            0, 0, 0, 0, FentMaterial.alphaOf(colour) / 255.0f * 0.9f
-         );
-      } catch (Throwable ignored) {
-      }
+      gradient(bridge, x, y, w, h, r0, r1, r2, r3, colour,
+         FentMaterial.argb(0, FentMaterial.rgbOf(colour)));
    }
 
    private static boolean previewFlat() {
-      try {
-         return net.silentclient.internal.V.c.g;
-      } catch (Throwable throwable) {
-         return false;
-      }
+      return false;
    }
 
    private static void gradient(RenderBridge bridge, float x, float y, float w, float h,
@@ -430,7 +405,7 @@ public final class FentGlass {
       }
    }
 
-   private static float radius(f node) {
+   private static float radius(d node) {
       return Math.max(
          node.c("rounded", 0.0f),
          Math.max(
@@ -438,16 +413,6 @@ public final class FentGlass {
             Math.max(node.c("rounded-br", 0.0f), node.c("rounded-bl", 0.0f))
          )
       );
-   }
-
-   private static float[] corners(f node) {
-      float all = node.c("rounded", 0.0f);
-      return new float[] {
-         node.c("rounded-tl", all),
-         node.c("rounded-tr", all),
-         node.c("rounded-br", all),
-         node.c("rounded-bl", all)
-      };
    }
 
    private FentGlass() {

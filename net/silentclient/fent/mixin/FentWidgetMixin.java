@@ -11,9 +11,8 @@ import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
-import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
-@Mixin(targets = "net.silentclient.internal.V.i")
+@Mixin(targets = "net.silentclient.internal.W.i")
 public abstract class FentWidgetMixin {
    @Shadow
    @Final
@@ -56,13 +55,5 @@ public abstract class FentWidgetMixin {
    )
    private void fent$slot(String mode, MinecraftBridge minecraftBridge, RenderBridge renderBridge, CallbackInfo ci) {
       FentWidget.draw(this, mode, minecraftBridge, renderBridge, c);
-   }
-
-   @Inject(method = "W()F", at = @At("RETURN"), cancellable = true)
-   private void fent$lyricsOffset(CallbackInfoReturnable<Float> cir) {
-      double offset = FentWidget.offset();
-      if (offset != 0.0) {
-         cir.setReturnValue(Float.valueOf((float)(cir.getReturnValueF() + offset)));
-      }
    }
 }

@@ -65,9 +65,11 @@ $modsDir = Join-Path $GameDir "silentclient\fabric-mods\$mcVersion"
 $lib = Join-Path $GameDir "fabric\libraries"
 
 $silentclient = Find-Jar -Directory $modsDir -Pattern "client-runtime-*.jar"
+$fabricApi = Find-Jar -Directory $modsDir -Pattern "fabric-api-*.jar"
 $mixinJar = Find-Jar -Directory $lib -Pattern "sponge-mixin-*.jar"
 $loaderJar = Find-Jar -Directory $lib -Pattern "fabric-loader-*.jar"
 $gsonJar = Find-Jar -Directory $lib -Pattern "gson-*.jar"
+$brigadierJar = Find-Jar -Directory $lib -Pattern "brigadier-*.jar"
 $gameJar = Join-Path $GameDir "fabric\$mcVersion-client.jar"
 if (-not (Test-Path -LiteralPath $gameJar)) { throw "minecraft client jar not found at $gameJar" }
 "compiling against $silentclient"
@@ -89,17 +91,39 @@ $jar = Join-Path $root "fent-$version.jar"
 $classesDir = Join-Path $root "build\classes"
 $stageDir = Join-Path $root "build\jar"
 
-$cp = @($silentclient, $mixinJar, $loaderJar, $gsonJar, $gameJar) -join ";"
-
 Remove-Item -LiteralPath (Join-Path $root "build") -Recurse -Force -ErrorAction SilentlyContinue
 New-Item -ItemType Directory -Path $classesDir -Force | Out-Null
 New-Item -ItemType Directory -Path $stageDir -Force | Out-Null
+$apiDir = Join-Path $root "build\fabric-api"
+New-Item -ItemType Directory -Path $apiDir -Force | Out-Null
+& $jartool --extract --file $fabricApi --dir $apiDir
+if ($LASTEXITCODE -ne 0) { throw "could not extract Fabric API compile dependencies" }
+$apiJars = Join-Path $apiDir "META-INF\jars"
+$commandApi = Find-Jar -Directory $apiJars -Pattern "fabric-command-api-v2-*.jar"
+$apiBase = Find-Jar -Directory $apiJars -Pattern "fabric-api-base-*.jar"
+$cp = @($silentclient, $mixinJar, $loaderJar, $gsonJar, $brigadierJar, $gameJar, $commandApi, $apiBase) -join ";"
 
 $sources = Get-ChildItem -Path (Join-Path $root "net") -Recurse -Filter *.java | ForEach-Object { $_.FullName }
 if (-not $sources) { throw "no sources found under $root\net" }
+$stubPath = Join-Path $root "build\compile-stubs\net\minecraft\class_7157.java"
+New-Item -ItemType Directory -Path (Split-Path -Parent $stubPath) -Force | Out-Null
+[System.IO.File]::WriteAllText(
+    $stubPath,
+    "package net.minecraft;`r`n`r`npublic class class_7157 {`r`n}`r`n",
+    [System.Text.Encoding]::ASCII
+)
+$textStubPath = Join-Path $root "build\compile-stubs\net\minecraft\class_2561.java"
+[System.IO.File]::WriteAllText(
+    $textStubPath,
+    "package net.minecraft;`r`n`r`npublic interface class_2561 {`r`n    static class_2561 method_43470(String text) { return null; }`r`n}`r`n",
+    [System.Text.Encoding]::ASCII
+)
+$sources += @($stubPath, $textStubPath)
 
 & $javac --release 21 -proc:none -nowarn -cp $cp -d $classesDir @sources
 if ($LASTEXITCODE -ne 0) { throw "javac failed" }
+Remove-Item -LiteralPath (Join-Path $classesDir "net\minecraft\class_7157.class") -Force -ErrorAction SilentlyContinue
+Remove-Item -LiteralPath (Join-Path $classesDir "net\minecraft\class_2561.class") -Force -ErrorAction SilentlyContinue
 
 Copy-Item -Path "$classesDir\*" -Destination $stageDir -Recurse -Force
 Copy-Item -LiteralPath $manifestPath -Destination $stageDir -Force
@@ -148,7 +172,14 @@ if (-not $SkipMixinCheck) {
         if ($LASTEXITCODE -ne 0) { throw "tools/MixinCheck.java did not compile" }
 
         $checkCp = @($silentclient, $gameJar, $loaderJar) + ($asmJars | ForEach-Object { $_.FullName })
-        & (Join-Path $jdk "bin\java.exe") -cp "$toolDir;$asmCp" MixinCheck ($checkCp -join ";") (Join-Path $classesDir "net\silentclient\fent\mixin")
+        $mixinClasses = @()
+        $packagePath = $mixinConfig.package.Replace('.', [string][IO.Path]::DirectorySeparatorChar)
+        foreach ($mixin in @($mixinConfig.client) + @($mixinConfig.mixins) + @($mixinConfig.server)) {
+            if ($mixin) {
+                $mixinClasses += Join-Path (Join-Path $classesDir $packagePath) ($mixin + ".class")
+            }
+        }
+        & (Join-Path $jdk "bin\java.exe") -cp "$toolDir;$asmCp" MixinCheck ($checkCp -join ";") @mixinClasses
         if ($LASTEXITCODE -ne 0) { throw "mixin target check failed - a SilentClient update moved an injection target" }
     }
 }

@@ -6,10 +6,10 @@ import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Redirect;
 
-@Mixin(targets = "net.silentclient.internal.V.c")
+@Mixin(targets = "net.silentclient.internal.W.c")
 public abstract class FentHudMixin {
    @Redirect(
-      method = "a(Lnet/silentclient/common/api/context/ModContext;FFI)V",
+      method = "a(Lnet/silentclient/common/api/bridge/RenderBridge;FFFFFIF)V",
       at = @At(
          value = "INVOKE",
          target = "Lnet/silentclient/common/api/bridge/RenderBridge;drawRoundedRect(FFFFFI)V",
@@ -22,7 +22,7 @@ public abstract class FentHudMixin {
    }
 
    @Redirect(
-      method = "a(Lnet/silentclient/common/api/context/ModContext;FFI)V",
+      method = "a(Lnet/silentclient/common/api/bridge/RenderBridge;FFFFFIF)V",
       at = @At(
          value = "INVOKE",
          target = "Lnet/silentclient/common/api/bridge/RenderBridge;drawRect(FFFFI)V",

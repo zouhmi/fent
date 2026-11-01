@@ -154,7 +154,7 @@ public final class FentWidget {
       }
       try {
          Class<?> type = widget.getClass();
-         colorOf = type.getDeclaredMethod("S");
+         colorOf = type.getDeclaredMethod("U");
          colorOf.setAccessible(true);
          drawSlot = type.getDeclaredMethod("a", String.class, int.class, String.class, float.class);
          drawSlot.setAccessible(true);
@@ -326,7 +326,7 @@ public final class FentWidget {
          }
          if (!lyricsBroken && (lyricsClass == null || lyricAt == null)) {
             try {
-               Class<?> type = Class.forName("net.silentclient.internal.az.l");
+               Class<?> type = Class.forName("net.silentclient.internal.aC.k");
                lyricsClass = type;
                lyricAt = type.getMethod("a", float.class);
             } catch (Throwable throwable) {

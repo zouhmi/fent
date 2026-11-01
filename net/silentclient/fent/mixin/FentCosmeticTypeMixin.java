@@ -2,6 +2,7 @@ package net.silentclient.fent.mixin;
 
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 import net.silentclient.common.api.services.cosmetics.Cosmetic;
 import net.silentclient.common.api.services.cosmetics.CosmeticType;
 import net.silentclient.fent.FentUnlocks;
@@ -14,7 +15,7 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
-@Mixin(targets = "net.silentclient.internal.at.b")
+@Mixin(targets = "net.silentclient.internal.aw.d")
 public abstract class FentCosmeticTypeMixin {
    @Unique
    private static final String FENT_PREFIX = "fent.selected.";
@@ -34,37 +35,12 @@ public abstract class FentCosmeticTypeMixin {
    @Shadow
    public abstract long b(CosmeticType type, String id);
 
-   @Unique
-   private static volatile java.lang.reflect.Method FENT_PUBLISH;
+   @Shadow
+   private volatile Map<String, Set<String>> q;
 
-   @Unique
-   private void fent$publish(CosmeticType type, String id) {
-      try {
-         java.lang.reflect.Method publish = FENT_PUBLISH;
-         if (publish == null) {
-            publish = findPublish(Class.forName("net.silentclient.internal.at.b"));
-            if (publish != null) {
-               FENT_PUBLISH = publish;
-            } else {
-               throw new NoSuchMethodException("f(CosmeticType,String)");
-            }
-         }
-         publish.invoke(this, type, id);
-      } catch (Throwable throwable) {
-         throw new RuntimeException(throwable);
-      }
-   }
-
-   @Unique
-   private static java.lang.reflect.Method findPublish(Class<?> type) {
-      try {
-         java.lang.reflect.Method publish = type.getDeclaredMethod("f",
-            CosmeticType.class, String.class);
-         publish.setAccessible(true);
-         return publish;
-      } catch (Throwable ignored) {
-         return null;
-      }
+   @Shadow
+   private static String h(CosmeticType type) {
+      throw new AssertionError();
    }
 
    @Inject(
@@ -84,10 +60,10 @@ public abstract class FentCosmeticTypeMixin {
       cancellable = true
    )
    private void fent$equipLocally(CosmeticType type, String id, CallbackInfoReturnable<Boolean> cir) {
-      if (type == null || this.a(type) || !FentUnlocks.type(type)) {
+      String value = id == null ? "" : id;
+      if (type == null || this.a(type) || !FentUnlocks.type(type) || fent$owns(type, value)) {
          return;
       }
-      String value = id == null ? "" : id;
       if (!value.isEmpty()) {
          try {
             if (this.c(type, value) == null) {
@@ -97,28 +73,26 @@ public abstract class FentCosmeticTypeMixin {
          }
       }
       try {
-         try {
-            if (this.b(type) != null) {
-               net.silentclient.internal.an.o.a(type, "");
-            }
-         } catch (Throwable ignored) {
-         }
          this.b(type, value);
       } catch (Throwable throwable) {
          System.err.println("[Fent] could not equip a cosmetic locally: " + throwable);
          return;
       }
       try {
-         fent$publish(type, value);
-      } catch (Throwable throwable) {
-         System.err.println("[Fent] could not publish a local cosmetic pick: " + throwable);
-      }
-      fent$save(type, value);
-      try {
          net.silentclient.fent.FentShare.publishLocal();
       } catch (Throwable ignored) {
       }
       cir.setReturnValue(Boolean.TRUE);
+   }
+
+   @Unique
+   private boolean fent$owns(CosmeticType type, String id) {
+      if (id.isEmpty()) {
+         return false;
+      }
+      Map<String, Set<String>> owned = this.q;
+      Set<String> ids = owned == null ? null : owned.get(h(type));
+      return ids != null && ids.contains(id);
    }
 
    @Inject(method = "a(Ljava/util/Map;)V", at = @At("HEAD"), cancellable = true)
@@ -135,6 +109,16 @@ public abstract class FentCosmeticTypeMixin {
          fent$clearDisabledFakes();
       } catch (Throwable throwable) {
          System.err.println("[Fent] could not reapply cosmetic picks: " + throwable);
+      }
+   }
+
+   @Inject(
+      method = "b(Lnet/silentclient/common/api/services/cosmetics/CosmeticType;Ljava/lang/String;)J",
+      at = @At("RETURN")
+   )
+   private void fent$saveLocalSelection(CosmeticType type, String id, CallbackInfoReturnable<Long> cir) {
+      if (type != null && FentUnlocks.type(type)) {
+         fent$save(type, id == null ? "" : id);
       }
    }
 
@@ -173,21 +157,10 @@ public abstract class FentCosmeticTypeMixin {
             if (saved.equals(current)) {
                continue;
             }
-            if (this.b(type) != null) {
-               try {
-                  net.silentclient.internal.an.o.a(type, "");
-               } catch (Throwable ignored) {
-               }
-            }
             this.b(type, saved);
          } catch (Throwable throwable) {
             System.err.println("[Fent] could not reapply a cosmetic pick: " + throwable);
             continue;
-         }
-         try {
-            fent$publish(type, saved);
-         } catch (Throwable throwable) {
-            System.err.println("[Fent] could not publish a cosmetic pick: " + throwable);
          }
       }
    }
@@ -228,10 +201,6 @@ public abstract class FentCosmeticTypeMixin {
                continue;
             }
             this.b(type, "");
-            try {
-               fent$publish(type, "");
-            } catch (Throwable ignored) {
-            }
          } catch (Throwable ignored) {
          }
       }

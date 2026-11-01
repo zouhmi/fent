@@ -6,15 +6,15 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-@Mixin(targets = "net.silentclient.internal.ax.a")
+@Mixin(targets = "net.silentclient.internal.aA.a")
 public abstract class FentAeroMixin {
    @Inject(method = "<clinit>", at = @At("TAIL"))
    private static void fent$registerAero(CallbackInfo ci) {
-      FentAero.refresh(net.silentclient.internal.ax.a.c(), net.silentclient.internal.ax.a.d());
+      FentAero.refresh(net.silentclient.internal.aA.a.c(), net.silentclient.internal.aA.a.d());
    }
 
    @Inject(method = "o()V", at = @At("TAIL"))
    private static void fent$refreshAero(CallbackInfo ci) {
-      FentAero.refresh(net.silentclient.internal.ax.a.c(), net.silentclient.internal.ax.a.d());
+      FentAero.refresh(net.silentclient.internal.aA.a.c(), net.silentclient.internal.aA.a.d());
    }
 }

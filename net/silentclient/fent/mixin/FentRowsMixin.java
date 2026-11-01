@@ -7,7 +7,7 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
-@Mixin(targets = "net.silentclient.internal.K.i")
+@Mixin(targets = "net.silentclient.internal.L.h")
 public abstract class FentRowsMixin {
    @Inject(method = "y(Ljava/lang/String;)Ljava/lang/String;", at = @At("HEAD"), cancellable = true)
    private static void fent$bareFallbackRow(String key, CallbackInfoReturnable<String> cir) {

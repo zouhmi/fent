@@ -6,7 +6,7 @@ import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Redirect;
 
-@Mixin(targets = "net.silentclient.internal.V.t")
+@Mixin(targets = "net.silentclient.internal.W.t")
 public abstract class FentKeysMixin {
    @Redirect(
       method = "a(Lnet/silentclient/common/api/bridge/RenderBridge;FFFFFI)V",

@@ -7,7 +7,7 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
-@Mixin(targets = "net.silentclient.internal.ax.a")
+@Mixin(targets = "net.silentclient.internal.aA.a")
 public abstract class FentTokensMixin {
    @Inject(method = "a(Ljava/lang/String;I)I", at = @At("RETURN"), cancellable = true)
    private static void fent$whiteText(String token, int fallback, CallbackInfoReturnable<Integer> cir) {
