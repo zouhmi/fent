@@ -611,10 +611,24 @@ public final class FentShare {
    public static String apiKey() {
       try {
          String key = FentUnlocks.string(API_KEY_KEY);
-         return key == null ? "" : key.trim();
-      } catch (Throwable throwable) {
-         return "";
+         if (key != null && !key.trim().isEmpty()) {
+            return key.trim();
+         }
+      } catch (Throwable ignored) {
       }
+      // Built-in key baked at build time (build/keygen, never committed), so
+      // sync connects automatically with no in-game setup. A key set via
+      // /fentshare key always wins. Loaded by reflection so compiling net/
+      // without build.ps1 still works (then there is simply no default).
+      try {
+         Object value = Class.forName("net.silentclient.fent.FentKeyDefault")
+            .getDeclaredField("VALUE").get(null);
+         if (value instanceof String) {
+            return ((String) value).trim();
+         }
+      } catch (Throwable ignored) {
+      }
+      return "";
    }
 
    public static String syncName() {

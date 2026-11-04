@@ -72,8 +72,15 @@ public final class FentMod implements ClientModInitializer {
          root.then(api);
 
          root.then(ClientCommandManager.literal("key").executes(context -> {
-            context.getSource().sendFeedback(class_2561.method_43470(
-               FentShare.apiKey().isEmpty() ? "No API key set." : "An API key is set."));
+            String manual = "";
+            try {
+               manual = FentUnlocks.string("fent.api.key");
+            } catch (Throwable ignored) {
+            }
+            String status = FentShare.apiKey().isEmpty() ? "No sync key set."
+               : (manual == null || manual.trim().isEmpty() ? "Sync key is set (automatic)."
+                  : "Sync key is set (manual).");
+            context.getSource().sendFeedback(class_2561.method_43470(status));
             return 1;
          }));
          root.then(ClientCommandManager.literal("key")
