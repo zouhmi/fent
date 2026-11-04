@@ -1,0 +1,10 @@
+build/
+fent-*.jar
+.freebuff/
+__pycache__/
+*.pyc
+fent_config.json
+*api_key*
+*.log
+
+*.class
