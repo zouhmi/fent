@@ -52,7 +52,6 @@ public abstract class FentSettingsMixin {
       rows.add(fent$toggle("colorpicker.off", "Hide Colour Picker"));
       rows.add(fent$toggle("lyrics.cache", "Cache Lyrics"));
       rows.add(fent$toggle("coins.off", "Keep Coins Off"));
-      rows.add(fent$toggle("share.cosmetics", "Share Cosmetics (Fent-to-Fent)"));
       try {
          b = new HashMap<String, List<p.b>>(b);
          b.put("unlocker", rows);

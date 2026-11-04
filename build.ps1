@@ -105,21 +105,6 @@ $commandApi = Find-Jar -Directory $apiJars -Pattern "fabric-command-api-v2-*.jar
 $apiBase = Find-Jar -Directory $apiJars -Pattern "fabric-api-base-*.jar"
 $cp = @($silentclient, $mixinJar, $loaderJar, $gsonJar, $brigadierJar, $gameJar, $commandApi, $apiBase) -join ";"
 
-$defaultKey = ""
-if ($env:FENT_API_KEY) { $defaultKey = "$env:FENT_API_KEY".Trim() }
-else {
-    $keyFile = Join-Path (Split-Path -Parent $root) "work\api_key.txt"
-    if (Test-Path -LiteralPath $keyFile) { $defaultKey = (Get-Content -LiteralPath $keyFile -Raw).Trim() }
-}
-if ($defaultKey -cnotmatch '^[A-Za-z0-9._-]{1,128}$') {
-    if ($defaultKey) { Write-Warning "ignoring malformed default sync key" }
-    $defaultKey = ""
-}
-$keyGenPath = Join-Path $root "build\keygen\net\silentclient\fent\FentKeyDefault.java"
-New-Item -ItemType Directory -Path (Split-Path -Parent $keyGenPath) -Force | Out-Null
-[System.IO.File]::WriteAllText($keyGenPath, "package net.silentclient.fent;`r`n`r`nfinal class FentKeyDefault {`r`n    static final String VALUE = `"$defaultKey`";`r`n}`r`n", [System.Text.Encoding]::ASCII)
-if ($defaultKey) { "baked default sync key: yes (a key set via /fentshare key still wins)" } else { Write-Warning "no default sync key baked - uploads need /fentshare key in game" }
-
 $sources = Get-ChildItem -Path (Join-Path $root "net") -Recurse -Filter *.java | ForEach-Object { $_.FullName }
 if (-not $sources) { throw "no sources found under $root\net" }
 $stubPath = Join-Path $root "build\compile-stubs\net\minecraft\class_7157.java"
@@ -142,7 +127,6 @@ $srcStubPath = Join-Path $root "build\compile-stubs\net\minecraft\class_2172.jav
     [System.Text.Encoding]::ASCII
 )
 $sources += @($stubPath, $textStubPath, $srcStubPath)
-$sources += @($keyGenPath)
 
 & $javac --release 21 -proc:none -nowarn -cp $cp -d $classesDir @sources
 if ($LASTEXITCODE -ne 0) { throw "javac failed" }

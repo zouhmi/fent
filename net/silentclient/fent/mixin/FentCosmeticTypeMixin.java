@@ -7,7 +7,6 @@ import java.util.Set;
 import net.silentclient.common.api.services.cosmetics.Cosmetic;
 import net.silentclient.common.api.services.cosmetics.CosmeticType;
 import net.silentclient.common.api.services.cosmetics.EquippedCosmetics;
-import net.silentclient.fent.FentShare;
 import net.silentclient.fent.FentUnlocks;
 
 import org.spongepowered.asm.mixin.Mixin;
@@ -115,10 +114,6 @@ public abstract class FentCosmeticTypeMixin {
          this.f(type, value);
       } catch (Throwable ignored) {
       }
-      try {
-         net.silentclient.fent.FentShare.publishLocal();
-      } catch (Throwable ignored) {
-      }
       cir.setReturnValue(Boolean.TRUE);
    }
 
@@ -126,7 +121,7 @@ public abstract class FentCosmeticTypeMixin {
     * a(CosmeticType,String) is the one entry point every equip path uses.
     * Already-owned equips short-circuit to p.a(type,id) without the local
     * mirror ever being touched, so saving at its tail covers both the owned
-    * and the Fent-unlocked paths, and lets the sync API publish every change.
+    * and the Fent-unlocked paths.
     */
    @Inject(
       method = "a(Lnet/silentclient/common/api/services/cosmetics/CosmeticType;Ljava/lang/String;)Z",
@@ -154,10 +149,6 @@ public abstract class FentCosmeticTypeMixin {
          return;
       }
       fent$save(type, value);
-      try {
-         net.silentclient.fent.FentShare.publishLocal();
-      } catch (Throwable ignored) {
-      }
    }
 
    @Unique
@@ -343,13 +334,6 @@ public abstract class FentCosmeticTypeMixin {
    @Unique
    private static void fent$save(CosmeticType type, String id) {
       FentUnlocks.setString(fent$key(type), id.isEmpty() ? "" : id);
-      // Any cosmetic selection change - silent client equip, fent override, restore,
-      // disable-clear - now funnels through here, so trigger the fent-to-fent publish
-      // from here to guarantee changes made while inside a server are always broadcast.
-      try {
-         net.silentclient.fent.FentShare.publishLocal();
-      } catch (Throwable ignored) {
-      }
    }
 
    @Unique

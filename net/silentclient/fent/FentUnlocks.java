@@ -211,10 +211,6 @@ public final class FentUnlocks {
       return on("colorpicker.off");
    }
 
-   public static boolean shareCosmetics() {
-      return on("share.cosmetics");
-   }
-
    public static boolean type(CosmeticType type) {
       if (type == null) {
          return cosmetics();

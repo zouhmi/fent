@@ -8,8 +8,6 @@
     "FentAeroMixin",
     "FentColorPickerMixin",
     "FentCoinsMixin",
-    "FentEmotePublishMixin",
-    "FentLocalEmoteMixin",
     "FentCosmeticTypeMixin",
     "FentEmotesMixin",
     "FentGlassMixin",
@@ -20,7 +18,6 @@
     "FentPremiumServiceMixin",
     "FentRowsMixin",
     "FentSettingsMixin",
-    "FentSharedCosmeticsMixin",
     "FentThemesMixin",
     "FentTokensMixin",
     "FentWidgetMixin"
