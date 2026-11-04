@@ -8,6 +8,8 @@ Community addon for SilentClient (client side, 1.21.11) by [Zouhmi](https://zouh
 - **Glass HUD**: Keystrokes, Mouse Strokes and Dynamic Widget island, plus a glass music player.
 - **Dynamic Widget extras**: Date, Day, Biome, Players, Track, Artist, Song Time, Current Lyric, Lyrics Offset.
 - **Unlocks**: cosmetics, emotes, themes, Premium (local only).
+- **Outfit memory**: equipped cosmetics are saved locally and re-applied across servers, worlds and restarts.
+- **Local emotes**: unlocked emotes play without the server roundtrip (seen locally; other players need the real unlock).
 - **Small fixes**: real account heads, hidden colour picker, lyric cache.
 
 ## Settings

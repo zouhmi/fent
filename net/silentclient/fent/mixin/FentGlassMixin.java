@@ -34,6 +34,11 @@ public abstract class FentGlassMixin {
       d node = element;
       Frame frame = FENT_STACK.get().push();
       frame.node = node;
+      // Outfit memory driver for menu-only sessions (no HUD rects rendered).
+      try {
+         net.silentclient.fent.FentOutfit.tick();
+      } catch (Throwable ignored) {
+      }
       if (node != null && renderBridge != null && FentAero.glass()) {
          try {
             if ("icon-button".equals(node.c) && fent$isMainMenu(element)) {

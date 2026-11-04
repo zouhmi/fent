@@ -446,6 +446,10 @@ public final class FentGlass {
 
    private static void draw(RenderBridge bridge, float x, float y, float w, float h,
                             float r0, float r1, float r2, float r3, int colour) {
+      // Outfit memory driver: every HUD rect funnels through here, so the
+      // saved outfit is re-asserted even with no equip packet (server/world
+      // switch, singleplayer, post-restart catalog race). Time-throttled.
+      FentOutfit.tick();
       if (r0 <= 0.01f && r1 <= 0.01f && r2 <= 0.01f && r3 <= 0.01f) {
          bridge.drawRect(x, y, w, h, colour);
       } else if (r0 == r1 && r1 == r2 && r2 == r3) {
