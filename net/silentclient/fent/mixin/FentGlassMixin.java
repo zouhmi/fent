@@ -40,21 +40,15 @@ public abstract class FentGlassMixin {
                FentGlass.tintMainMenuIcon(node, frame.iconTintSaved);
                frame.iconTintApplied = true;
             }
-            String[] white = FentGlass.whiten(node);
-            if (white != null) {
-               System.arraycopy(white, 0, frame.saved, 0, white.length);
-               frame.keys = FentGlass.textKeys();
-            } else {
-               int kind = FentGlass.kind(node, hover, renderBridge.screenWidth(), renderBridge.screenHeight());
-               if (kind == FentGlass.PANE) {
-                  FentGlass.paneShadow(renderBridge, node);
-                  FentGlass.paneGradient(renderBridge, node);
-                  FentGlass.markPane(node, frame.saved);
-                  frame.keys = FentGlass.paneKeys();
-               } else if (kind == FentGlass.SURFACE) {
-                  if (FentGlass.surface(node, hover, frame.saved) != null) {
-                     frame.keys = FentGlass.surfaceKeys();
-                  }
+            int kind = FentGlass.kind(node, hover, renderBridge.screenWidth(), renderBridge.screenHeight());
+            if (kind == FentGlass.PANE) {
+               FentGlass.paneShadow(renderBridge, node);
+               FentGlass.paneGradient(renderBridge, node);
+               FentGlass.markPane(node, frame.saved);
+               frame.keys = FentGlass.paneKeys();
+            } else if (kind == FentGlass.SURFACE) {
+               if (FentGlass.surface(node, hover, frame.saved) != null) {
+                  frame.keys = FentGlass.surfaceKeys();
                }
             }
           } catch (Throwable throwable) {
@@ -77,15 +71,24 @@ public abstract class FentGlassMixin {
          return;
       }
       try {
-         if (node == null || frame.node != node) {
+         // Restore onto the node the state was SAVED FROM, even when the pop
+         // does not line up with this invocation's node. An exception thrown
+         // between HEAD and RETURN used to skip the restore entirely here,
+         // permanently leaving glass/gradient attributes on the node - which
+         // corrupted menu backdrops (white server-menu cards). saved[] belongs
+         // to frame.node, so restoring it is always the correct repair.
+         d target = frame.node != null ? frame.node : node;
+         if (target == null) {
             return;
          }
          if (frame.iconTintApplied) {
-            FentGlass.restore(node, frame.iconTintSaved, FentGlass.iconTintKeys());
+            FentGlass.restore(target, frame.iconTintSaved, FentGlass.iconTintKeys());
          }
          if (frame.keys != null) {
-            FentGlass.restore(node, frame.saved, frame.keys);
+            FentGlass.restore(target, frame.saved, frame.keys);
          }
+      } catch (Throwable ignored) {
+         // never let a restore failure break rendering of this screen.
       } finally {
          frame.clear();
       }
@@ -155,7 +158,24 @@ public abstract class FentGlassMixin {
 
       private void clear() {
          while (this.size > 0) {
-            this.frames[--this.size].clear();
+            restoreSafely(this.frames[--this.size]);
+            this.frames[this.size].clear();
+         }
+      }
+
+      /** Wiping a frame must not strand fent's attributes on its node. */
+      private static void restoreSafely(Frame frame) {
+         try {
+            if (frame == null || frame.node == null) {
+               return;
+            }
+            if (frame.iconTintApplied) {
+               FentGlass.restore(frame.node, frame.iconTintSaved, FentGlass.iconTintKeys());
+            }
+            if (frame.keys != null) {
+               FentGlass.restore(frame.node, frame.saved, frame.keys);
+            }
+         } catch (Throwable ignored) {
          }
       }
    }

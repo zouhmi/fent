@@ -20,7 +20,8 @@ public abstract class FentEmotesMixin {
    @Shadow
    private volatile Set<String> k;
 
-   @Inject(method = "j(Ljava/lang/String;)Z", at = @At("HEAD"), cancellable = true)
+   @Inject(method = "l(Ljava/lang/String;)Z", at = @At("HEAD"), cancellable = true)
+   // TEST3.1: the emote ownership check moved from j(String) to l(String).
    private void fent$ownsEverything(String id, CallbackInfoReturnable<Boolean> cir) {
       if (id != null && FentUnlocks.emotes()) {
          cir.setReturnValue(Boolean.TRUE);

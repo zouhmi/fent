@@ -49,7 +49,6 @@ public abstract class FentSettingsMixin {
       rows.add(fent$toggle("aero.glass", "Liquid Glass UI"));
       rows.add(fent$toggle("aero.hud", "Liquid Glass HUD"));
       rows.add(fent$toggle("aero.refraction", "Liquid Glass Refraction"));
-      rows.add(fent$toggle("rows.transparent", "Transparent Setting Rows"));
       rows.add(fent$toggle("colorpicker.off", "Hide Colour Picker"));
       rows.add(fent$toggle("lyrics.cache", "Cache Lyrics"));
       rows.add(fent$toggle("coins.off", "Keep Coins Off"));

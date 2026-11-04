@@ -19,7 +19,6 @@ public final class FentGlass {
       "glass-border-bottom"
    };
    private static final String[] SURFACE_KEYS = new String[] {"gradient-from", "gradient-to", "gradient-angle"};
-   private static final String[] TEXT_KEYS = new String[] {"color"};
    private static final String[] ICON_TINT_KEYS = new String[] {"icon-tint", "active-icon-tint", "hover-icon-tint"};
    private static final String MENU_ICON_TINT = "#AAB7C8FF";
 
@@ -183,10 +182,6 @@ public final class FentGlass {
       return PANE_KEYS;
    }
 
-   public static String[] textKeys() {
-      return TEXT_KEYS;
-   }
-
    public static String[] iconTintKeys() {
       return ICON_TINT_KEYS;
    }
@@ -250,10 +245,6 @@ public final class FentGlass {
       return 0xFFFFFFFF;
    }
 
-   public static String[] whiten(d node) {
-      return null;
-   }
-
    private static void save(d node, String[] keys, String[] saved) {
       if (node == null || node.d == null) {
          return;
@@ -268,7 +259,7 @@ public final class FentGlass {
       if (bridge == null || w < 1.0f || h < 1.0f) {
          return;
       }
-      boolean material = FentAero.hudGlass() && !previewFlat();
+      boolean material = FentAero.hudGlass();
       if (!material) {
          draw(bridge, x, y, w, h, r0, r1, r2, r3, plate);
          return;
@@ -334,7 +325,7 @@ public final class FentGlass {
       if (bridge == null || w < 1.0f || h < 1.0f) {
          return;
       }
-      if (!FentAero.hudGlass() || previewFlat()) {
+      if (!FentAero.hudGlass()) {
          draw(bridge, x, y, w, h, radius, radius, radius, radius, colour);
          return;
       }
@@ -359,7 +350,7 @@ public final class FentGlass {
       if (bridge == null || w < 1.0f || h < 1.0f) {
          return;
       }
-      if (!FentAero.hudGlass() || previewFlat()) {
+      if (!FentAero.hudGlass()) {
          draw(bridge, x, y, w, h, radius, radius, radius, radius, colour);
          return;
       }
@@ -372,7 +363,7 @@ public final class FentGlass {
       if (bridge == null || w < 1.0f || h < 1.0f) {
          return;
       }
-      if (!FentAero.hudGlass() || previewFlat()) {
+      if (!FentAero.hudGlass()) {
          draw(bridge, x, y, w, h, r0, r1, r2, r3, colour);
          return;
       }
@@ -385,7 +376,7 @@ public final class FentGlass {
       if (bridge == null) {
          return;
       }
-      if (!FentAero.hudGlass() || previewFlat()) {
+      if (!FentAero.hudGlass()) {
          bridge.drawRgbaImage(key, pixels, width, height, x, y, iw, ih, tint);
          return;
       }
@@ -417,10 +408,6 @@ public final class FentGlass {
                              float r0, float r1, float r2, float r3, int colour) {
       gradient(bridge, x, y, w, h, r0, r1, r2, r3, colour,
          FentMaterial.argb(0, FentMaterial.rgbOf(colour)));
-   }
-
-   private static boolean previewFlat() {
-      return false;
    }
 
    private static void gradient(RenderBridge bridge, float x, float y, float w, float h,

@@ -11,6 +11,10 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 public abstract class FentTokensMixin {
    @Inject(method = "a(Ljava/lang/String;I)I", at = @At("RETURN"), cancellable = true)
    private static void fent$whiteText(String token, int fallback, CallbackInfoReturnable<Integer> cir) {
+      // If the Liquid Glass theme could not be registered during static init
+      // (TEST3.1 has null theme colors while the class is loading), retry here:
+      // this lookup runs constantly once the UI is up.
+      FentAero.ensureRegistered();
       if (!FentAero.active() || FentAero.light()) {
          return;
       }

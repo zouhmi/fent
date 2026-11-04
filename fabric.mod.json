@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "id": "zouhmifent",
-  "version": "1.8.9",
+  "version": "1.9.4",
   "name": "Fent",
   "description": "Community addon for SilentClient. Liquid Glass theme for menus and HUD with GPU backdrop blur (manual refraction fallback), glass music player, extra Dynamic Widget slots (Date, Day, Biome, Players, Track, Artist, Song Time, Current Lyric) with lyrics offset, plus optional local unlocks for cosmetics, emotes, themes and Premium and Fent-to-Fent cosmetic appearance sharing (no ownership sent). Toggles in Modules, Settings, Fent. Credit: zouhmi.com",
   "authors": [

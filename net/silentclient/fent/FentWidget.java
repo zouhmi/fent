@@ -196,6 +196,11 @@ public final class FentWidget {
       }
    }
 
+   /** Sticky media/lyric failures retry after a minute: a source that was
+    *  merely not initialized yet (cold boot ordering) used to stay dead for
+    *  the whole session. */
+   private static volatile long brokenRetryAt;
+   private static final long BROKEN_RETRY_NANOS = 60000000000L;
    private static final java.util.Set<String> BROKEN_METHODS =
       java.util.Collections.newSetFromMap(new java.util.concurrent.ConcurrentHashMap<String, Boolean>());
    private static volatile Class<?> media;
@@ -216,7 +221,11 @@ public final class FentWidget {
 
    private static Object call(String method) {
       if (BROKEN_METHODS.contains(method)) {
-         return null;
+         long now = System.nanoTime();
+         if (now < brokenRetryAt && now >= brokenRetryAt - BROKEN_RETRY_NANOS) {
+            return null;
+         }
+         BROKEN_METHODS.remove(method);
       }
       try {
          Class<?> type = media;
@@ -232,6 +241,7 @@ public final class FentWidget {
          return accessor.invoke(null);
       } catch (Throwable throwable) {
          BROKEN_METHODS.add(method);
+         brokenRetryAt = System.nanoTime() + BROKEN_RETRY_NANOS;
          System.err.println("[Fent] a media slot source moved: " + throwable);
          return null;
       }
@@ -324,13 +334,21 @@ public final class FentWidget {
          if (!Boolean.TRUE.equals(snapPlaying)) {
             return null;
          }
-         if (!lyricsBroken && (lyricsClass == null || lyricAt == null)) {
+         if (lyricsBroken) {
+            long now = System.nanoTime();
+            if (now < brokenRetryAt && now >= brokenRetryAt - BROKEN_RETRY_NANOS) {
+               return null;
+            }
+            lyricsBroken = false;
+         }
+         if (lyricsClass == null || lyricAt == null) {
             try {
                Class<?> type = Class.forName("net.silentclient.internal.aC.k");
                lyricsClass = type;
                lyricAt = type.getMethod("a", float.class);
             } catch (Throwable throwable) {
                lyricsBroken = true;
+               brokenRetryAt = System.nanoTime() + BROKEN_RETRY_NANOS;
                System.err.println("[Fent] the lyric line source moved: " + throwable);
                return null;
             }

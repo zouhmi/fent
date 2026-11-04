@@ -20,40 +20,88 @@ public final class FentUnlocks {
    private static volatile Path cachedPath;
    private static volatile long cachedModified;
    private static volatile long lastProbeNanos;
+   /** Key lookups memoized for the current probe window (menus query these
+    *  per row per frame; the old code walked the Gson tree every time). */
+   private static final java.util.concurrent.ConcurrentHashMap<String, String> VALUE_MEMO =
+      new java.util.concurrent.ConcurrentHashMap<String, String>();
+   private static final Object CONFIG_LOCK = new Object();
 
-   private static synchronized JsonObject readConfig() {
-      try {
-         Path path = configPath();
-         long now = System.nanoTime();
-         if (cached != null && path.equals(cachedPath) && now - lastProbeNanos < MTIME_TTL_NANOS
-            && (now >= lastProbeNanos)) {
+   /** True while this probe window is fresh enough to serve without I/O. */
+   private static boolean windowFresh() {
+      long now = System.nanoTime();
+      return cached != null && now >= lastProbeNanos && now - lastProbeNanos < MTIME_TTL_NANOS;
+   }
+
+   /**
+    * Hot path is lock-free: toggle checks run per UI row per frame and used to
+    * serialize on the class monitor plus walk the config tree each call. Only
+    * one file stat happens per MTIME_TTL window, not per call.
+    */
+   private static JsonObject readConfig() {
+      if (windowFresh()) {
+         return cached;
+      }
+      synchronized (CONFIG_LOCK) {
+         if (windowFresh()) { // another thread probed while we waited
             return cached;
          }
-         lastProbeNanos = now;
-         if (!Files.exists(path)) {
-            cached = new JsonObject();
-            cachedPath = path;
-            cachedModified = 0L;
+         Path path;
+         try {
+            path = configPath();
+         } catch (Throwable noLoader) {
+            // FabricLoader unavailable (headless tools/tests): cache an empty
+            // config instead of re-throwing on every single toggle lookup.
+            store(new JsonObject(), null, 0L);
             return cached;
          }
-         long modified = Files.getLastModifiedTime(path).toMillis();
-         if (cached != null && path.equals(cachedPath) && modified == cachedModified) {
+         try {
+            lastProbeNanos = System.nanoTime();
+            if (!Files.exists(path)) {
+               store(new JsonObject(), path, 0L);
+               return cached;
+            }
+            long modified = Files.getLastModifiedTime(path).toMillis();
+            if (cached != null && path.equals(cachedPath) && modified == cachedModified) {
+               lastProbeNanos = System.nanoTime();
+               return cached;
+            }
+            String text = Files.readString(path);
+            JsonObject object = GSON.fromJson(text, JsonObject.class);
+            store(object == null ? new JsonObject() : object, path, modified);
+            return cached;
+         } catch (Throwable throwable) {
+            if (cached == null) {
+               store(new JsonObject(), path, 0L);
+            }
             return cached;
          }
-         String text = Files.readString(path);
-         JsonObject object = GSON.fromJson(text, JsonObject.class);
-         object = object == null ? new JsonObject() : object;
-         cached = object;
-         cachedPath = path;
-         cachedModified = modified;
-         return object;
-      } catch (Throwable throwable) {
-         JsonObject have = cached;
-         return have == null ? new JsonObject() : have;
       }
    }
 
+   /** Publishes a snapshot and invalidates memoized lookups. */
+   private static void store(JsonObject object, Path path, long modified) {
+      cached = object;
+      cachedPath = path;
+      cachedModified = modified;
+      lastProbeNanos = System.nanoTime();
+      VALUE_MEMO.clear();
+   }
+
    private static String fileValue(String key) {
+      if (windowFresh()) {
+         String memo = VALUE_MEMO.get(key);
+         if (memo != null) {
+            return memo;
+         }
+      }
+      String computed = lookup(key);
+      if (windowFresh()) {
+         VALUE_MEMO.put(key, computed);
+      }
+      return computed;
+   }
+
+   private static String lookup(String key) {
       try {
          JsonObject root = readConfig();
          if (root.has("settings") && root.get("settings").isJsonObject()) {
@@ -110,12 +158,7 @@ public final class FentUnlocks {
             Files.createDirectories(parent);
          }
          Files.writeString(path, GSON.toJson(root));
-         cached = root;
-         cachedPath = path;
-         lastProbeNanos = System.nanoTime();
-         if (Files.exists(path)) {
-            cachedModified = Files.getLastModifiedTime(path).toMillis();
-         }
+         store(root, path, Files.exists(path) ? Files.getLastModifiedTime(path).toMillis() : 0L);
       } catch (Throwable ignored) {
       }
    }
@@ -140,24 +183,28 @@ public final class FentUnlocks {
       return on("coins.off");
    }
 
+   private static boolean explicitlyOn(String key) {
+      String value = value("unlocker." + key).trim().toLowerCase(Locale.ROOT);
+      return "true".equals(value) || "1".equals(value);
+   }
+
+   /** Effect-heavy features are opt-in: on some GPUs (notably Intel iGPU) the
+     * glass pipeline renders opaque white and eats frames, so never enable it
+     * just because the setting is unset. */
    public static boolean liquidGlassUi() {
-      return on("aero.glass");
+      return explicitlyOn("aero.glass");
    }
 
    public static boolean liquidGlassHud() {
-      return on("aero.hud");
+      return explicitlyOn("aero.hud");
    }
 
    public static boolean liquidGlassRefraction() {
-      return on("aero.refraction");
+      return explicitlyOn("aero.refraction");
    }
 
    public static boolean lyricsCache() {
       return on("lyrics.cache");
-   }
-
-   public static boolean transparentRows() {
-      return on("rows.transparent");
    }
 
    public static boolean hideColorPicker() {

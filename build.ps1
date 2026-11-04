@@ -96,8 +96,10 @@ New-Item -ItemType Directory -Path $classesDir -Force | Out-Null
 New-Item -ItemType Directory -Path $stageDir -Force | Out-Null
 $apiDir = Join-Path $root "build\fabric-api"
 New-Item -ItemType Directory -Path $apiDir -Force | Out-Null
-& $jartool --extract --file $fabricApi --dir $apiDir
-if ($LASTEXITCODE -ne 0) { throw "could not extract Fabric API compile dependencies" }
+$apiZip = Join-Path $root "build\fabric-api.zip"
+Copy-Item -LiteralPath $fabricApi -Destination $apiZip -Force
+Expand-Archive -LiteralPath $apiZip -DestinationPath $apiDir -Force | Out-Null
+
 $apiJars = Join-Path $apiDir "META-INF\jars"
 $commandApi = Find-Jar -Directory $apiJars -Pattern "fabric-command-api-v2-*.jar"
 $apiBase = Find-Jar -Directory $apiJars -Pattern "fabric-api-base-*.jar"
@@ -118,12 +120,17 @@ $textStubPath = Join-Path $root "build\compile-stubs\net\minecraft\class_2561.ja
     "package net.minecraft;`r`n`r`npublic interface class_2561 {`r`n    static class_2561 method_43470(String text) { return null; }`r`n}`r`n",
     [System.Text.Encoding]::ASCII
 )
-$sources += @($stubPath, $textStubPath)
+$srcStubPath = Join-Path $root "build\compile-stubs\net\minecraft\class_2172.java"
+[System.IO.File]::WriteAllText(
+    $srcStubPath,
+    "package net.minecraft;`r`n`r`npublic interface class_2172 {`r`n    void method_47399(net.minecraft.class_2561 component);`r`n}`r`n",
+    [System.Text.Encoding]::ASCII
+)
+$sources += @($stubPath, $textStubPath, $srcStubPath)
 
 & $javac --release 21 -proc:none -nowarn -cp $cp -d $classesDir @sources
 if ($LASTEXITCODE -ne 0) { throw "javac failed" }
-Remove-Item -LiteralPath (Join-Path $classesDir "net\minecraft\class_7157.class") -Force -ErrorAction SilentlyContinue
-Remove-Item -LiteralPath (Join-Path $classesDir "net\minecraft\class_2561.class") -Force -ErrorAction SilentlyContinue
+Remove-Item -LiteralPath (Join-Path $classesDir "net\minecraft") -Recurse -Force -ErrorAction SilentlyContinue
 
 Copy-Item -Path "$classesDir\*" -Destination $stageDir -Recurse -Force
 Copy-Item -LiteralPath $manifestPath -Destination $stageDir -Force
@@ -253,7 +260,7 @@ if ($Install) {
                 $changed = $true
             }
             if ($changed) {
-                $json = $profiles | ConvertTo-Json -Depth 8
+                $json = $profiles | ConvertTo-Json -Depth 16
                 [System.IO.File]::WriteAllText($profilesPath, $json, (New-Object System.Text.UTF8Encoding($false)))
                 "updated the profile mod list in $profilesPath"
             }

@@ -160,12 +160,9 @@ public final class MaterialCheck {
       check("accent token is left alone", FentGlass.whiteForToken("accent", 0xFF8A8F98) == 0);
       check("textOnAccent is left alone", FentGlass.whiteForToken("textOnAccent", 0xFF8A8F98) == 0);
       check("null token is left alone", FentGlass.whiteForToken(null, 0xFF8A8F98) == 0);
+      // node whitening was removed: labels always keep the theme's colors.
       d grey = node("text", 120.0f, 10.0f, "color", "#8A8F98FF");
-      check("a grey label stays grey", FentGlass.whiten(grey) == null && "#8A8F98FF".equals(grey.d.get("color")));
-      d blue = node("text", 120.0f, 10.0f, "color", "#4C9FFFFF");
-      check("a blue label is left alone", FentGlass.whiten(blue) == null && "#4C9FFFFF".equals(blue.d.get("color")));
-      d plain = node("panel", 200.0f, 40.0f, "bg", "#FF1A1A1A", "rounded", "4");
-      check("panels are not whitened", FentGlass.whiten(plain) == null);
+      check("a grey label keeps its own color", "#8A8F98FF".equals(grey.d.get("color")));
     }
 
    private static void blackRefractionReadback() {

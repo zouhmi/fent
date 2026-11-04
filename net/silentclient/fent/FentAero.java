@@ -9,13 +9,14 @@ import java.util.Map;
 public final class FentAero {
    public static final String ID = "liquidglass";
    private static final String NAME = "Liquid Glass";
-private static final String THEMES_CLASS = "net.silentclient.internal.aA.a";
-private static final String THEME_CLASS = "net.silentclient.internal.aA.a$a";
+   private static final String THEMES_CLASS = "net.silentclient.internal.aA.a";
+   private static final String THEME_CLASS = "net.silentclient.internal.aA.a$a";
    private static final String DARK_TEMPLATE = "midnight";
    private static final String LIGHT_TEMPLATE = "porcelain";
    private static final int FALLBACK_BASE = 0x14161B;
    private static final int FALLBACK_ACCENT = 0x4C9FFF;
    private static final long ACTIVE_TTL_NANOS = 200000000L;
+   private static volatile long lastEnsureNanos;
 
    private static volatile boolean broken;
    private static volatile Class<?> themesClass;
@@ -38,6 +39,7 @@ private static final String THEME_CLASS = "net.silentclient.internal.aA.a$a";
       }
       try {
          if (themesClass == null && !resolve()) {
+            broken = true;
             return;
          }
          int base = rgb(baseHex, FALLBACK_BASE);
@@ -67,15 +69,50 @@ private static final String THEME_CLASS = "net.silentclient.internal.aA.a$a";
          }
          map.put(ID, theme);
          Object cache = previewCache.get(null);
-          if (cache instanceof Map) {
-             try {
-                ((Map<?, ?>)cache).remove(ID);
-             } catch (Throwable ignored) {
-             }
-          }
+         if (cache instanceof Map) {
+            try {
+               ((Map<?, ?>)cache).remove(ID);
+            } catch (Throwable ignored) {
+            }
+         }
       } catch (Throwable throwable) {
-         broken = true;
+         if (throwable instanceof ClassNotFoundException
+            || throwable instanceof NoSuchMethodException
+            || throwable instanceof NoSuchFieldException
+            || throwable instanceof LinkageError) {
+            broken = true;
+         }
          System.err.println("[Fent] could not register the Liquid Glass theme: " + throwable);
+      }
+   }
+
+   /**
+    * TEST3.1 wires the theme colors to real values only after the aA.a class
+    * initializes, so the static-init injections see null data and skip. This
+    * retry (throttled, triggered from token lookups) finishes the registration.
+    */
+   public static void ensureRegistered() {
+      long now = System.nanoTime();
+      if (lastEnsureNanos != 0L && now - lastEnsureNanos < 1000000000L) {
+         return;
+      }
+      lastEnsureNanos = now;
+      try {
+         if (broken) {
+            return;
+         }
+         if (themesClass != null) {
+            // Already resolved; nothing to do, the theme either registered or
+            // will no longer line up.
+            return;
+         }
+         net.silentclient.common.api.setting.ColorSetting base = net.silentclient.internal.aA.a.a();
+         net.silentclient.common.api.setting.ColorSetting accent = net.silentclient.internal.aA.a.b();
+         if (base == null || accent == null || base.getValue() == null || accent.getValue() == null) {
+            return;
+         }
+         refresh(net.silentclient.internal.aA.a.c(), net.silentclient.internal.aA.a.d());
+      } catch (Throwable ignored) {
       }
    }
 
