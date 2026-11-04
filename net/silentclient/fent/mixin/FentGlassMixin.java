@@ -40,20 +40,33 @@ public abstract class FentGlassMixin {
                FentGlass.tintMainMenuIcon(node, frame.iconTintSaved);
                frame.iconTintApplied = true;
             }
-            int kind = FentGlass.kind(node, hover, renderBridge.screenWidth(), renderBridge.screenHeight());
+            // One bg/hover-bg parse per node per frame: kind() classifies with
+            // the precomputed fill and surface() reuses it instead of parsing again.
+            int fill = FentGlass.fillOf(node, hover);
+            int kind = FentGlass.kind(node, hover, renderBridge.screenWidth(), renderBridge.screenHeight(), fill);
             if (kind == FentGlass.PANE) {
+               frame.keys = FentGlass.paneKeys();
                FentGlass.paneShadow(renderBridge, node);
                FentGlass.paneGradient(renderBridge, node);
                FentGlass.markPane(node, frame.saved);
-               frame.keys = FentGlass.paneKeys();
             } else if (kind == FentGlass.SURFACE) {
-               if (FentGlass.surface(node, hover, frame.saved) != null) {
-                  frame.keys = FentGlass.surfaceKeys();
+               frame.keys = FentGlass.surfaceKeys();
+               if (FentGlass.surface(node, hover, frame.saved, fill) == null) {
+                  frame.keys = null;
                }
             }
           } catch (Throwable throwable) {
-             if (frame.iconTintApplied) {
-                FentGlass.restore(node, frame.iconTintSaved, FentGlass.iconTintKeys());
+             // frame.keys is assigned BEFORE mutating, so a mid-mark throw
+             // still restores the keys that were saved (shared saved[] only
+             // holds originals for frame.keys, never a mix of sets).
+             try {
+                if (frame.iconTintApplied) {
+                   FentGlass.restore(node, frame.iconTintSaved, FentGlass.iconTintKeys());
+                }
+                if (frame.keys != null) {
+                   FentGlass.restore(node, frame.saved, frame.keys);
+                }
+             } catch (Throwable ignored) {
              }
              frame.clear();
           }
@@ -108,15 +121,20 @@ public abstract class FentGlassMixin {
          return cached.booleanValue();
       }
       boolean mainMenu = FentGlass.isMainMenu(root);
-      FENT_MAIN_MENU_CACHE.put(root, Boolean.valueOf(mainMenu));
+      // Only cache positive hits: menus build their trees incrementally, so a
+      // first-frame miss (anchor not attached yet) must not stick forever and
+      // grey out icons on the real main menu a frame later.
+      if (mainMenu) {
+         FENT_MAIN_MENU_CACHE.put(root, Boolean.TRUE);
+      }
       return mainMenu;
    }
 
    @Unique
    private static final class Frame {
       private d node;
-      private final String[] saved = new String[7];
-      private final String[] iconTintSaved = new String[3];
+      private final String[] saved = new String[net.silentclient.fent.FentGlass.paneKeys().length];
+      private final String[] iconTintSaved = new String[net.silentclient.fent.FentGlass.iconTintKeys().length];
       private String[] keys;
       private boolean iconTintApplied;
 

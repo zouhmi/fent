@@ -18,6 +18,8 @@ public final class FentLyrics {
    private static final String EMPTY_SYNCED = "\"syncedLyrics\":\"\"";
    private static final int LIMIT = 300;
    private static final int PRUNE_EVERY = 32;
+   private static final java.util.regex.Pattern DURATION_PARAM =
+      java.util.regex.Pattern.compile("[&?]duration=[0-9.]+");
    private static int writes;
    private static volatile Path dir;
 
@@ -104,7 +106,7 @@ public final class FentLyrics {
    }
 
    private static Path file(String url) {
-      String normalized = url.replaceAll("[&?]duration=[0-9.]+", "");
+      String normalized = DURATION_PARAM.matcher(url).replaceAll("");
       String name = slug(parameter(url, "artist_name")) + "-" + slug(parameter(url, "track_name"))
          + "-" + Integer.toHexString(normalized.hashCode());
       return dir().resolve(name + ".json");

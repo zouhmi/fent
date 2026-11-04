@@ -256,7 +256,9 @@ public final class FentRefraction {
       if (rows != height) {
          return false;
       }
-      byte[] raw = byteScratch = ensureB(byteScratch, size);
+      // Local scratch: the old shared byteScratch raced when two callers
+      // (HUD plates + MaterialCheck) ran on different threads.
+      byte[] raw = new byte[size];
       bytes.get(raw, 0, size);
       for (int row = 0; row < rows; ++row) {
          int target = (height - 1 - row) * width;

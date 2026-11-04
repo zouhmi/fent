@@ -1,9 +1,11 @@
 package net.silentclient.fent;
 
 import com.google.gson.Gson;
+import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.util.Locale;
 import net.fabricmc.loader.api.FabricLoader;
 import net.silentclient.common.api.services.cosmetics.CosmeticType;
@@ -16,10 +18,21 @@ public final class FentUnlocks {
       return FabricLoader.getInstance().getGameDir().resolve("silentclient").resolve("config.json");
    }
 
-   private static volatile JsonObject cached;
-   private static volatile Path cachedPath;
-   private static volatile long cachedModified;
-   private static volatile long lastProbeNanos;
+   /** Immutable snapshot: a single volatile reference keeps root/path/mtime/probe atomic. */
+   private static final class Snapshot {
+      final JsonObject root;
+      final Path path;
+      final long modified;
+      final long probedAt;
+      Snapshot(JsonObject root, Path path, long modified, long probedAt) {
+         this.root = root;
+         this.path = path;
+         this.modified = modified;
+         this.probedAt = probedAt;
+      }
+   }
+
+   private static volatile Snapshot SNAP = new Snapshot(null, null, 0L, 0L);
    /** Key lookups memoized for the current probe window (menus query these
     *  per row per frame; the old code walked the Gson tree every time). */
    private static final java.util.concurrent.ConcurrentHashMap<String, String> VALUE_MEMO =
@@ -28,8 +41,12 @@ public final class FentUnlocks {
 
    /** True while this probe window is fresh enough to serve without I/O. */
    private static boolean windowFresh() {
+      Snapshot snap = SNAP;
+      if (snap.root == null) {
+         return false;
+      }
       long now = System.nanoTime();
-      return cached != null && now >= lastProbeNanos && now - lastProbeNanos < MTIME_TTL_NANOS;
+      return now >= snap.probedAt && now - snap.probedAt < MTIME_TTL_NANOS;
    }
 
    /**
@@ -38,12 +55,16 @@ public final class FentUnlocks {
     * one file stat happens per MTIME_TTL window, not per call.
     */
    private static JsonObject readConfig() {
-      if (windowFresh()) {
-         return cached;
+      Snapshot snap = SNAP;
+      long now = System.nanoTime();
+      if (snap.root != null && now >= snap.probedAt && now - snap.probedAt < MTIME_TTL_NANOS) {
+         return snap.root;
       }
       synchronized (CONFIG_LOCK) {
-         if (windowFresh()) { // another thread probed while we waited
-            return cached;
+         snap = SNAP;
+         now = System.nanoTime();
+         if (snap.root != null && now >= snap.probedAt && now - snap.probedAt < MTIME_TTL_NANOS) {
+            return snap.root; // another thread probed while we waited
          }
          Path path;
          try {
@@ -52,47 +73,46 @@ public final class FentUnlocks {
             // FabricLoader unavailable (headless tools/tests): cache an empty
             // config instead of re-throwing on every single toggle lookup.
             store(new JsonObject(), null, 0L);
-            return cached;
+            return SNAP.root;
          }
          try {
-            lastProbeNanos = System.nanoTime();
             if (!Files.exists(path)) {
                store(new JsonObject(), path, 0L);
-               return cached;
+               return SNAP.root;
             }
             long modified = Files.getLastModifiedTime(path).toMillis();
-            if (cached != null && path.equals(cachedPath) && modified == cachedModified) {
-               lastProbeNanos = System.nanoTime();
-               return cached;
+            if (snap.root != null && path.equals(snap.path) && modified == snap.modified) {
+               // Content unchanged: keep the tree + memo, just extend the window.
+               SNAP = new Snapshot(snap.root, snap.path, snap.modified, System.nanoTime());
+               return SNAP.root;
             }
             String text = Files.readString(path);
             JsonObject object = GSON.fromJson(text, JsonObject.class);
             store(object == null ? new JsonObject() : object, path, modified);
-            return cached;
+            return SNAP.root;
          } catch (Throwable throwable) {
-            if (cached == null) {
+            if (SNAP.root == null) {
                store(new JsonObject(), path, 0L);
+            } else {
+               // Keep serving the last good tree, but don't spin on a broken file.
+               Snapshot cur = SNAP;
+               SNAP = new Snapshot(cur.root, cur.path, cur.modified, System.nanoTime());
             }
-            return cached;
+            return SNAP.root;
          }
       }
    }
 
    /** Publishes a snapshot and invalidates memoized lookups. */
    private static void store(JsonObject object, Path path, long modified) {
-      cached = object;
-      cachedPath = path;
-      cachedModified = modified;
-      lastProbeNanos = System.nanoTime();
+      SNAP = new Snapshot(object, path, modified, System.nanoTime());
       VALUE_MEMO.clear();
    }
 
    private static String fileValue(String key) {
-      if (windowFresh()) {
-         String memo = VALUE_MEMO.get(key);
-         if (memo != null) {
-            return memo;
-         }
+      String memo = VALUE_MEMO.get(key);
+      if (memo != null && windowFresh()) {
+         return memo;
       }
       String computed = lookup(key);
       if (windowFresh()) {
@@ -101,17 +121,36 @@ public final class FentUnlocks {
       return computed;
    }
 
+   private static String asString(JsonObject owner, String key) {
+      try {
+         if (!owner.has(key)) {
+            return null;
+         }
+         JsonElement element = owner.get(key);
+         if (element == null || element.isJsonNull()) {
+            return null;
+         }
+         if (!element.isJsonPrimitive()) {
+            return null;
+         }
+         return element.getAsString();
+      } catch (Throwable ignored) {
+         return null;
+      }
+   }
+
    private static String lookup(String key) {
       try {
          JsonObject root = readConfig();
          if (root.has("settings") && root.get("settings").isJsonObject()) {
-            JsonObject settings = root.getAsJsonObject("settings");
-            if (settings.has(key) && !settings.get(key).isJsonNull()) {
-               return settings.get(key).getAsString();
+            String fromSettings = asString(root.getAsJsonObject("settings"), key);
+            if (fromSettings != null) {
+               return fromSettings;
             }
          }
-         if (root.has(key) && !root.get(key).isJsonNull()) {
-            return root.get(key).getAsString();
+         String top = asString(root, key);
+         if (top != null) {
+            return top;
          }
       } catch (Throwable ignored) {
       }
@@ -135,31 +174,53 @@ public final class FentUnlocks {
       return value(key);
    }
 
-   public static synchronized void setString(String key, String value) {
+   public static void setString(String key, String value) {
       String stored = value == null ? "" : value;
-      try {
-         Path path = configPath();
-         JsonObject root = readConfig();
-         JsonObject settings = null;
-         if (root.has("settings") && root.get("settings").isJsonObject()) {
-            settings = root.getAsJsonObject("settings");
-         } else {
-            settings = new JsonObject();
-            root.add("settings", settings);
+      synchronized (CONFIG_LOCK) {
+         try {
+            Path path = configPath();
+            JsonObject root = readConfig();
+            // Equip re-applies call b() per type per join, each funneling here
+            // with the value already stored: skip the tmp-write + move + Gson
+            // reparse when nothing changed.
+            String current = asString(root, key);
+            if (current == null && root.has("settings") && root.get("settings").isJsonObject()) {
+               current = asString(root.getAsJsonObject("settings"), key);
+            }
+            if (stored.equals(current == null ? "" : current)) {
+               return;
+            }
+            // Copy-on-write: never mutate the published snapshot in place,
+            // readers may be walking it lock-free on the render thread.
+            JsonObject copy = root.deepCopy();
+            JsonObject settings;
+            if (copy.has("settings") && copy.get("settings").isJsonObject()) {
+               settings = copy.getAsJsonObject("settings");
+            } else {
+               settings = new JsonObject();
+               copy.add("settings", settings);
+            }
+            if (stored.isEmpty()) {
+               settings.remove(key);
+               copy.remove(key);
+            } else {
+               settings.addProperty(key, stored);
+            }
+            Path parent = path.getParent();
+            if (parent != null) {
+               Files.createDirectories(parent);
+            }
+            Path tmp = path.resolveSibling(path.getFileName() + ".tmp");
+            Files.writeString(tmp, GSON.toJson(copy));
+            try {
+               Files.move(tmp, path, StandardCopyOption.ATOMIC_MOVE,
+                  StandardCopyOption.REPLACE_EXISTING);
+            } catch (java.nio.file.AtomicMoveNotSupportedException atomic) {
+               Files.move(tmp, path, StandardCopyOption.REPLACE_EXISTING);
+            }
+            store(copy, path, Files.exists(path) ? Files.getLastModifiedTime(path).toMillis() : 0L);
+         } catch (Throwable ignored) {
          }
-         if (stored.isEmpty()) {
-            settings.remove(key);
-            root.remove(key);
-         } else {
-            settings.addProperty(key, stored);
-         }
-         Path parent = path.getParent();
-         if (parent != null) {
-            Files.createDirectories(parent);
-         }
-         Files.writeString(path, GSON.toJson(root));
-         store(root, path, Files.exists(path) ? Files.getLastModifiedTime(path).toMillis() : 0L);
-      } catch (Throwable ignored) {
       }
    }
 

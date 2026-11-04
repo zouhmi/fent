@@ -135,8 +135,12 @@ public final class FentPremium {
    }
 
    private static int number(String key, int fallback) {
+      String raw = store.getProperty(key);
+      if (raw == null) {
+         return fallback;
+      }
       try {
-         return Integer.parseInt(store.getProperty(key));
+         return Integer.parseInt(raw.trim());
       } catch (NumberFormatException exception) {
          return fallback;
       }

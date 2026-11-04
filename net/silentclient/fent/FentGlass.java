@@ -30,6 +30,12 @@ public final class FentGlass {
    private static final String PANE_SHEEN_TEXT = Float.toString(FentMaterial.PANE_SHEEN);
 
    public static int kind(d node, boolean hover, float screenWidth, float screenHeight) {
+      return kind(node, hover, screenWidth, screenHeight, fill(node, hover));
+   }
+
+   /** Fill-precomputed variant: the bg/hover-bg parse is the hottest cost per
+    *  row per frame, so the caller parses once and reuses it for surface(). */
+   public static int kind(d node, boolean hover, float screenWidth, float screenHeight, int fill) {
       if (node == null || node.d == null) {
          return NONE;
       }
@@ -47,7 +53,7 @@ public final class FentGlass {
       if (screenWidth > 2.0f && screenHeight > 2.0f && node.h >= screenWidth - 4.0f && node.i >= screenHeight - 4.0f) {
          return NONE;
       }
-      if ((fill(node, hover) >>> 24 & 0xFF) < MIN_FILL_ALPHA) {
+      if ((fill >>> 24 & 0xFF) < MIN_FILL_ALPHA) {
          return NONE;
       }
       if (isPane(node, screenWidth, screenHeight)) {
@@ -68,6 +74,10 @@ public final class FentGlass {
    }
 
    private static int fill(d node, boolean hover) {
+      return fillOf(node, hover);
+   }
+
+   public static int fillOf(d node, boolean hover) {
       if (node == null || node.d == null) {
          return 0;
       }
@@ -147,11 +157,14 @@ public final class FentGlass {
    }
 
    public static String[] surface(d node, boolean hover, String[] saved) {
+      return surface(node, hover, saved, fill(node, hover));
+   }
+
+   public static String[] surface(d node, boolean hover, String[] saved, int fill) {
       if (node == null || node.d == null) {
          return null;
       }
       int accent = FentAero.accent();
-      int fill = fill(node, hover);
       int alpha = FentMaterial.alphaOf(fill);
       if (alpha < MIN_FILL_ALPHA) {
          return null;
@@ -223,8 +236,18 @@ public final class FentGlass {
       if (token == null) {
          return 0;
       }
-      String key = token.startsWith("@") ? token.substring(1) : token;
-      if (!key.startsWith("text") || "textOnAccent".equals(key)) {
+      // Allocation-free: token lookups run per text draw per frame, so avoid
+      // substring() for the common "@text*" form.
+      int start = token.startsWith("@") ? 1 : 0;
+      int length = token.length() - start;
+      if (length < 4
+         || token.charAt(start) != 't'
+         || token.charAt(start + 1) != 'e'
+         || token.charAt(start + 2) != 'x'
+         || token.charAt(start + 3) != 't') {
+         return 0;
+      }
+      if (length == 12 && token.endsWith("textOnAccent")) {
          return 0;
       }
       return whiteFor(colour);
