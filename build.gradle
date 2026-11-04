@@ -4,7 +4,11 @@ plugins {
 }
 
 group = 'net.silentclient.fent'
+<<<<<<< HEAD
 version = '2.0'
+=======
+version = '1.8.9'
+>>>>>>> 8b0d7c8da7408ff67c0e2647985d130930e96154
 
 java {
     toolchain.languageVersion = JavaLanguageVersion.of(21)
@@ -18,5 +22,10 @@ repositories {
 dependencies {
     modImplementation 'net.fabricmc:fabric-loader:0.19.1+1.21.11'
     modImplementation 'net.fabricmc.fabric-api:fabric-api:0.141.6+1.21.11'
+<<<<<<< HEAD
     modImplementation 'net.silentclient:silentclient12111:+'
+=======
+    modImplementation 'net.fabricmc:fabric:1.21.11'
+    modImplementation 'net.silentclient:silentclient12111:*'
+>>>>>>> 8b0d7c8da7408ff67c0e2647985d130930e96154
 }

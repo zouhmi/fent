@@ -3,6 +3,11 @@ fent-*.jar
 .freebuff/
 __pycache__/
 *.pyc
+<<<<<<< HEAD
+=======
+fent_config.json
+*api_key*
+>>>>>>> 8b0d7c8da7408ff67c0e2647985d130930e96154
 *.log
 
 *.class

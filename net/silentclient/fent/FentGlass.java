@@ -30,12 +30,15 @@ public final class FentGlass {
    private static final String PANE_SHEEN_TEXT = Float.toString(FentMaterial.PANE_SHEEN);
 
    public static int kind(d node, boolean hover, float screenWidth, float screenHeight) {
+<<<<<<< HEAD
       return kind(node, hover, screenWidth, screenHeight, fill(node, hover));
    }
 
    /** Fill-precomputed variant: the bg/hover-bg parse is the hottest cost per
     *  row per frame, so the caller parses once and reuses it for surface(). */
    public static int kind(d node, boolean hover, float screenWidth, float screenHeight, int fill) {
+=======
+>>>>>>> 8b0d7c8da7408ff67c0e2647985d130930e96154
       if (node == null || node.d == null) {
          return NONE;
       }
@@ -53,7 +56,11 @@ public final class FentGlass {
       if (screenWidth > 2.0f && screenHeight > 2.0f && node.h >= screenWidth - 4.0f && node.i >= screenHeight - 4.0f) {
          return NONE;
       }
+<<<<<<< HEAD
       if ((fill >>> 24 & 0xFF) < MIN_FILL_ALPHA) {
+=======
+      if ((fill(node, hover) >>> 24 & 0xFF) < MIN_FILL_ALPHA) {
+>>>>>>> 8b0d7c8da7408ff67c0e2647985d130930e96154
          return NONE;
       }
       if (isPane(node, screenWidth, screenHeight)) {
@@ -74,10 +81,13 @@ public final class FentGlass {
    }
 
    private static int fill(d node, boolean hover) {
+<<<<<<< HEAD
       return fillOf(node, hover);
    }
 
    public static int fillOf(d node, boolean hover) {
+=======
+>>>>>>> 8b0d7c8da7408ff67c0e2647985d130930e96154
       if (node == null || node.d == null) {
          return 0;
       }
@@ -157,14 +167,21 @@ public final class FentGlass {
    }
 
    public static String[] surface(d node, boolean hover, String[] saved) {
+<<<<<<< HEAD
       return surface(node, hover, saved, fill(node, hover));
    }
 
    public static String[] surface(d node, boolean hover, String[] saved, int fill) {
+=======
+>>>>>>> 8b0d7c8da7408ff67c0e2647985d130930e96154
       if (node == null || node.d == null) {
          return null;
       }
       int accent = FentAero.accent();
+<<<<<<< HEAD
+=======
+      int fill = fill(node, hover);
+>>>>>>> 8b0d7c8da7408ff67c0e2647985d130930e96154
       int alpha = FentMaterial.alphaOf(fill);
       if (alpha < MIN_FILL_ALPHA) {
          return null;
@@ -236,6 +253,7 @@ public final class FentGlass {
       if (token == null) {
          return 0;
       }
+<<<<<<< HEAD
       // Allocation-free: token lookups run per text draw per frame, so avoid
       // substring() for the common "@text*" form.
       int start = token.startsWith("@") ? 1 : 0;
@@ -248,6 +266,10 @@ public final class FentGlass {
          return 0;
       }
       if (length == 12 && token.endsWith("textOnAccent")) {
+=======
+      String key = token.startsWith("@") ? token.substring(1) : token;
+      if (!key.startsWith("text") || "textOnAccent".equals(key)) {
+>>>>>>> 8b0d7c8da7408ff67c0e2647985d130930e96154
          return 0;
       }
       return whiteFor(colour);
@@ -446,10 +468,13 @@ public final class FentGlass {
 
    private static void draw(RenderBridge bridge, float x, float y, float w, float h,
                             float r0, float r1, float r2, float r3, int colour) {
+<<<<<<< HEAD
       // Outfit memory driver: every HUD rect funnels through here, so the
       // saved outfit is re-asserted even with no equip packet (server/world
       // switch, singleplayer, post-restart catalog race). Time-throttled.
       FentOutfit.tick();
+=======
+>>>>>>> 8b0d7c8da7408ff67c0e2647985d130930e96154
       if (r0 <= 0.01f && r1 <= 0.01f && r2 <= 0.01f && r3 <= 0.01f) {
          bridge.drawRect(x, y, w, h, colour);
       } else if (r0 == r1 && r1 == r2 && r2 == r3) {

@@ -9,14 +9,20 @@
     "FentColorPickerMixin",
     "FentCoinsMixin",
     "FentCosmeticTypeMixin",
+<<<<<<< HEAD
     "FentEmotePlayMixin",
+=======
+>>>>>>> 8b0d7c8da7408ff67c0e2647985d130930e96154
     "FentEmotesMixin",
     "FentGlassMixin",
     "FentHudMixin",
     "FentIslandMixin",
     "FentKeysMixin",
     "FentLyricsMixin",
+<<<<<<< HEAD
     "FentOfflineEmotesMixin",
+=======
+>>>>>>> 8b0d7c8da7408ff67c0e2647985d130930e96154
     "FentPremiumServiceMixin",
     "FentRowsMixin",
     "FentSettingsMixin",

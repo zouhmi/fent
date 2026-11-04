@@ -22,7 +22,11 @@ public final class FentWidget {
       "Track", "Artist", "Song Time", "Current Lyric"
    };
 
+<<<<<<< HEAD
    private static volatile NumberSetting offset;
+=======
+   private static NumberSetting offset;
+>>>>>>> 8b0d7c8da7408ff67c0e2647985d130930e96154
    private static boolean offsetBroken;
    private static Method colorOf;
    private static Method drawSlot;
@@ -321,6 +325,7 @@ public final class FentWidget {
 
    private static String clock(float seconds) {
       int total = Math.max(0, (int)seconds);
+<<<<<<< HEAD
       int minutes = total / 60;
       int secs = total % 60;
       // Manual two-digit seconds: String.format() here allocated a Formatter
@@ -328,6 +333,9 @@ public final class FentWidget {
       char hi = (char)('0' + secs / 10);
       char lo = (char)('0' + secs % 10);
       return minutes + ":" + hi + lo;
+=======
+      return total / 60 + ":" + String.format(Locale.ROOT, "%02d", total % 60);
+>>>>>>> 8b0d7c8da7408ff67c0e2647985d130930e96154
    }
 
    private static String lyricLine() {

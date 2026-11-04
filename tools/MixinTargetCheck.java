@@ -404,6 +404,7 @@ public final class MixinTargetCheck {
       }
    }
 
+<<<<<<< HEAD
    static String javapExe() {
       String home = System.getProperty("java.home", "");
       if (!home.isEmpty()) {
@@ -416,11 +417,17 @@ public final class MixinTargetCheck {
       return System.getProperty("os.name", "").toLowerCase(java.util.Locale.ROOT).contains("win") ? "javap.exe" : "javap";
    }
 
+=======
+>>>>>>> 8b0d7c8da7408ff67c0e2647985d130930e96154
    static List<String> javap(String runtime, String target) throws Exception {
       // javap wants dots; targets in this codebase use dots (I$e style ok).
       String cls = target.replace('/', '.');
       Process process = new ProcessBuilder(
+<<<<<<< HEAD
          javapExe(),
+=======
+         "C:\\Users\\Admin\\.opt\\jdk21\\jdk-21.0.12.1+1\\bin\\javap.exe",
+>>>>>>> 8b0d7c8da7408ff67c0e2647985d130930e96154
          "-cp", runtime, "-p", cls).redirectErrorStream(true).start();
       BufferedReader reader = new BufferedReader(
          new InputStreamReader(process.getInputStream(), "UTF-8"));
