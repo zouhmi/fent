@@ -6,3 +6,5 @@ __pycache__/
 fent_config.json
 *api_key*
 *.log
+
+*.class

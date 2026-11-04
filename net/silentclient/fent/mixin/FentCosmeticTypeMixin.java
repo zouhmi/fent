@@ -194,56 +194,46 @@ public abstract class FentCosmeticTypeMixin {
    }
 
    /**
-    * Joining a new server or world pushes fresh equipped-cosmetics packets whose
-    * generation is older than the local selection but newer than the last known
-    * local generation, wiping locally unlocked cosmetics. Merge our saved
-    * selections back in and hand SilentClient the merged map, so nothing
-    * disappears in the first place.
+    * Joining a new server or world pushes fresh equipped-cosmetics packets that
+    * can be older than the local selection, visibly wiping fent picks - and the
+    * locker reopening on that stale state is what "reset" the outfit. Merge the
+    * saved selections into the incoming packet in place so nothing disappears
+    * in the first place; the RETURN hook below re-applies anything still
+    * missing. (This used to hook the CosmeticsListener default
+    * onEquippedChanged, which aw.d never overrides, so the hook matched
+    * nothing and Mixin rejected this entire class: no unlocks, no publish,
+    * no mirror saves. The real funnel is a(Map,long).)
     */
-   @Inject(
-      method = "onEquippedChanged(Lnet/silentclient/common/api/services/cosmetics/EquippedCosmetics;)V",
-      at = @At("HEAD"),
-      cancellable = true
-   )
-   private void fent$keepLocalSelections(EquippedCosmetics equipped, CallbackInfo ci) {
+   @Inject(method = "a(Ljava/util/Map;J)V", at = @At("HEAD"))
+   private void fent$mergeSavedIntoPacket(Map<CosmeticType, String> equipped, long generation, CallbackInfo ci) {
       if (!FentUnlocks.cosmetics() || equipped == null) {
          return;
       }
-      Map<CosmeticType, String> incoming = equipped.getItems();
-      if (incoming == null || incoming.isEmpty()) {
-         return;
-      }
-      boolean touched = false;
-      Map<CosmeticType, String> merged = new EnumMap<CosmeticType, String>(CosmeticType.class);
-      merged.putAll(incoming);
-      for (CosmeticType type : CosmeticType.values()) {
-         if (type == null || this.a(type) || !FentUnlocks.type(type)) {
-            continue;
-         }
-         String saved = FentUnlocks.string(fent$key(type));
-         if (saved == null || saved.isEmpty() || !idOk(saved)) {
-            continue;
-         }
-         try {
-            if (this.c(type, saved) == null) {
+      try {
+         for (CosmeticType type : CosmeticType.values()) {
+            if (type == null || this.a(type) || !FentUnlocks.type(type)) {
                continue;
             }
-         } catch (Throwable ignored) {
-            continue;
+            String saved = FentUnlocks.string(fent$key(type));
+            if (saved == null || saved.isEmpty() || !idOk(saved)) {
+               continue;
+            }
+            try {
+               if (this.c(type, saved) == null) {
+                  continue;
+               }
+            } catch (Throwable ignored) {
+               continue;
+            }
+            try {
+               equipped.put(type, saved);
+            } catch (Throwable ignored) {
+               // Unmodifiable packet map: the RETURN hook heals it right after.
+            }
          }
-         merged.put(type, saved);
-         touched = true;
-      }
-      if (!touched) {
-         return;
-      }
-      try {
-         this.a(merged, H.get());
       } catch (Throwable throwable) {
-         System.err.println("[Fent] could not merge mirrored cosmetic packets: " + throwable);
-         return;
+         System.err.println("[Fent] could not merge saved cosmetic picks: " + throwable);
       }
-      ci.cancel();
    }
 
    @Inject(method = "a(Ljava/util/Map;J)V", at = @At("RETURN"))

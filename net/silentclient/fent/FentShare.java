@@ -224,13 +224,6 @@ public final class FentShare {
             }
          }
          if (saved == null || saved.isEmpty() || !idOk(saved)) {
-            try {
-               saved = net.silentclient.internal.aw.d.e().d(type);
-            } catch (Throwable ignored) {
-               saved = null;
-            }
-         }
-         if (saved == null || saved.isEmpty() || !idOk(saved)) {
             continue;
          }
          out.put(type, saved);
@@ -320,6 +313,9 @@ public final class FentShare {
       }
       pruneThrottled();
       String key = playerId.toLowerCase(Locale.ROOT);
+      if (fent$isSelfKey(key)) {
+         return null; // your live state is the truth, not your server row
+      }
       Remote direct = REMOTES.get(key);
       if (direct != null) {
          return direct.items.isEmpty() ? null : direct.snapshot();
@@ -556,6 +552,7 @@ public final class FentShare {
       String value = name == null ? "" : name.trim();
       if (value.length() <= 48) {
          FentUnlocks.setString(API_NAME_KEY, value);
+         fent$selfAt = 0L; // re-resolve the self guard on next use
       }
    }
 
@@ -808,7 +805,9 @@ public final class FentShare {
             .header("Content-Type", "application/json")
             .PUT(HttpRequest.BodyPublishers.ofString(GSON.toJson(root), StandardCharsets.UTF_8))
             .build();
-         client().send(request, HttpResponse.BodyHandlers.discarding());
+         HttpResponse<Void> response =
+            client().send(request, HttpResponse.BodyHandlers.discarding());
+         fent$notePublishStatus(response.statusCode(), false);
       } catch (Throwable throwable) {
          logNetError("could not reach the cosmetic sync API", throwable);
       }
@@ -912,6 +911,57 @@ public final class FentShare {
       }
    }
 
+   private static volatile String fent$selfA = "";
+   private static volatile String fent$selfB = "";
+   private static volatile long fent$selfAt;
+
+   /** Your own live game state is the truth for your own row: never let a
+    *  stale server row clobber your own outfit, and never serve your own row
+    *  back as someone else's "remote" view of you. Refreshes at most every
+    *  30s so the per-frame viewer path stays two string equals(). */
+   private static boolean fent$isSelfKey(String lowerKey) {
+      try {
+         long now = System.nanoTime();
+         if (now - fent$selfAt > 30000000000L || now < fent$selfAt) {
+            fent$selfAt = now;
+            String sync = syncName();
+            fent$selfA = sync == null ? "" : sync.toLowerCase(Locale.ROOT);
+            String local = null;
+            try {
+               local = net.silentclient.internal.aq.w.a();
+            } catch (Throwable ignored) {
+            }
+            fent$selfB = local == null ? "" : local.toLowerCase(Locale.ROOT);
+         }
+         return lowerKey.equals(fent$selfA)
+            || (!fent$selfB.isEmpty() && lowerKey.equals(fent$selfB));
+      } catch (Throwable ignored) {
+         return false;
+      }
+   }
+
+   /** Loud, actionable upload diagnostics: a rejected PUT used to vanish
+    *  silently, which is exactly how "the API never changes" went unnoticed. */
+   private static void fent$notePublishStatus(int code, boolean emote) {
+      try {
+         if (code >= 200 && code < 300) {
+            return;
+         }
+         String what = emote ? "emote" : "cosmetic";
+         if (code == 401 || code == 403) {
+            logNetError("sync " + what + " upload rejected (" + code
+               + "): run /fentshare key <your-key> in chat, then /fentshare resync",
+               new RuntimeException("http " + code));
+         } else if (code == 429) {
+            logNetError("sync " + what + " upload throttled (429)", new RuntimeException("http 429"));
+         } else {
+            logNetError("sync " + what + " upload failed (" + code + ")",
+               new RuntimeException("http " + code));
+         }
+      } catch (Throwable ignored) {
+      }
+   }
+
    /** Applies cosmetics + current emote of one peer through FentInterop. */
    private static void applyRemoteFor(String playerId) {
       applyRemoteFor(playerId, false);
@@ -928,6 +978,9 @@ public final class FentShare {
             return;
          }
          String key = playerId.toLowerCase(Locale.ROOT);
+         if (fent$isSelfKey(key)) {
+            return; // never paint your own row over your own live outfit
+         }
          Remote remote = REMOTES.get(key);
          PeerEmote playing = PEER_EMOTES.get(key);
          String emote = playing == null ? "" : playing.emote;
@@ -1127,7 +1180,9 @@ public final class FentShare {
             .header("Content-Type", "application/json")
             .PUT(HttpRequest.BodyPublishers.ofString(GSON.toJson(root), StandardCharsets.UTF_8))
             .build();
-         client().send(request, HttpResponse.BodyHandlers.discarding());
+         HttpResponse<Void> response =
+            client().send(request, HttpResponse.BodyHandlers.discarding());
+         fent$notePublishStatus(response.statusCode(), true);
       } catch (Throwable throwable) {
          logNetError("could not reach the emote sync API", throwable);
       }
