@@ -11,8 +11,6 @@ Community addon for SilentClient (client side, 1.21.11) by [Zouhmi](https://zouh
 <<<<<<< HEAD
 - **Outfit memory**: equipped cosmetics are saved locally and re-applied across servers, worlds and restarts.
 - **Local emotes**: unlocked emotes play without the server roundtrip (seen locally; other players need the real unlock).
-=======
->>>>>>> 8b0d7c8da7408ff67c0e2647985d130930e96154
 - **Small fixes**: real account heads, hidden colour picker, lyric cache.
 
 ## Settings
